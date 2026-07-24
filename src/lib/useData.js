@@ -1,0 +1,86 @@
+import { useCallback, useEffect, useState } from "react";
+import { supabase } from "./supabase.js";
+import * as local from "../data/siteplan.js";
+
+// Ambil tabel. Fallback ke data contoh HANYA jika Supabase mati atau tabel belum
+// dibuat (error). Kalau tabel ada tapi kosong → kembalikan kosong (data asli),
+// supaya data yang sengaja dihapus tidak "dihidupkan lagi" oleh data dummy.
+async function fetchTable(name, fallback, order = "id") {
+  if (!supabase) return fallback;
+  const { data, error } = await supabase
+    .from(name)
+    .select("*")
+    .order(order, { ascending: true });
+  if (error) return fallback;
+  return data || [];
+}
+
+// State awal: kalau Supabase aktif, mulai kosong (biar tak ada kedip data dummy);
+// kalau tidak, pakai data contoh lokal.
+const emptyState = {
+  iuran: [], kas: [], transaksi: [], agenda: [], usaha: [], pengumuman: [],
+  dataWarga: [], keuangan: [], iuranAir: [], banjirKontribusi: [],
+  banjirPengeluaran: [], struktur: [], lokasi: local.lokasi, source: "supabase",
+};
+const localState = {
+  iuran: local.iuran, kas: local.kas, transaksi: local.transaksi,
+  agenda: local.agenda, usaha: local.usahaWarga, pengumuman: local.pengumuman,
+  dataWarga: local.dataWarga, keuangan: local.keuanganRows, iuranAir: local.iuranAir,
+  banjirKontribusi: local.banjirKontribusi, banjirPengeluaran: local.banjirPengeluaran,
+  struktur: local.struktur, lokasi: local.lokasi, source: "lokal",
+};
+
+export function useData() {
+  const [state, setState] = useState(supabase ? emptyState : localState);
+  const [nonce, setNonce] = useState(0);
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
+
+  useEffect(() => {
+    let alive = true;
+    if (!supabase) return;
+    (async () => {
+      const [
+        iuran, kas, transaksi, agenda, usaha, pengumuman,
+        dataWarga, keuangan, iuranAir, banjirKontribusi, banjirPengeluaran,
+        struktur, pengaturan,
+      ] = await Promise.all([
+        fetchTable("iuran", local.iuran),
+        fetchTable("kas", local.kas),
+        fetchTable("transaksi", local.transaksi),
+        fetchTable("agenda", local.agenda),
+        fetchTable("usaha", local.usahaWarga),
+        fetchTable("pengumuman", local.pengumuman),
+        fetchTable("data_warga", local.dataWarga),
+        fetchTable("keuangan", local.keuanganRows),
+        fetchTable("iuran_air", local.iuranAir),
+        fetchTable("banjir_kontribusi", local.banjirKontribusi),
+        fetchTable("banjir_pengeluaran", local.banjirPengeluaran),
+        fetchTable("struktur", local.struktur, "urutan"),
+        fetchTable("pengaturan", [local.lokasi]),
+      ]);
+      if (alive)
+        setState({
+          iuran, kas, transaksi, agenda, usaha, pengumuman,
+          dataWarga, keuangan, iuranAir, banjirKontribusi, banjirPengeluaran,
+          struktur, lokasi: pengaturan[0] || local.lokasi, source: "supabase",
+        });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [nonce]);
+
+  useEffect(() => {
+    const on = () => {
+      if (document.visibilityState === "visible") reload();
+    };
+    window.addEventListener("focus", on);
+    document.addEventListener("visibilitychange", on);
+    return () => {
+      window.removeEventListener("focus", on);
+      document.removeEventListener("visibilitychange", on);
+    };
+  }, [reload]);
+
+  return { ...state, reload };
+}
