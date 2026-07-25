@@ -11,17 +11,22 @@ create table if not exists iuran (
   jenis text not null, nominal int not null default 0, periode text default 'per bulan'
 );
 
+-- Kas: cukup nama + saldo awal. Saldo berjalan DIHITUNG dari transaksi.
 create table if not exists kas (
   id bigint generated always as identity primary key,
   nama text not null, saldo int not null default 0
 );
+alter table kas add column if not exists saldo_awal int not null default 0;
 
+-- Transaksi = sumber kebenaran keuangan. Ditandai kas & periode.
 create table if not exists transaksi (
   id bigint generated always as identity primary key,
   tgl date not null default now(), ket text,
   tipe text check (tipe in ('masuk','keluar')) default 'masuk',
   nominal int not null default 0
 );
+alter table transaksi add column if not exists kas text;
+alter table transaksi add column if not exists periode text;
 
 create table if not exists agenda (
   id bigint generated always as identity primary key,
@@ -91,19 +96,20 @@ select * from (values
 ) v(jenis,nominal,periode)
 where not exists (select 1 from iuran);
 
-insert into kas (nama, saldo)
+insert into kas (nama, saldo_awal)
 select * from (values
-  ('Kas Umum', 4250000), ('Kas Keamanan', 1980000), ('Kas Kebersihan', 1120000)
-) v(nama,saldo)
+  ('Kas Umum', 500000), ('Kas Keamanan', 0), ('Kas Kebersihan', 0)
+) v(nama,saldo_awal)
 where not exists (select 1 from kas);
 
-insert into transaksi (tgl, ket, tipe, nominal)
+insert into transaksi (tgl, periode, kas, tipe, nominal, ket)
 select * from (values
-  ('2026-07-20'::date,'Iuran keamanan 148 rumah','masuk',4440000),
-  ('2026-07-18'::date,'Gaji Satpam (Jul)','keluar',3600000),
-  ('2026-07-15'::date,'Iuran sampah 148 rumah','masuk',3700000),
-  ('2026-07-12'::date,'Angkut sampah TPS','keluar',2100000)
-) v(tgl,ket,tipe,nominal)
+  ('2026-07-20'::date,'Periode 4','Kas Keamanan','masuk',4440000,'Iuran keamanan 148 rumah'),
+  ('2026-07-18'::date,'Periode 4','Kas Keamanan','keluar',3600000,'Gaji Satpam (Jul)'),
+  ('2026-07-15'::date,'Periode 4','Kas Kebersihan','masuk',3700000,'Iuran sampah 148 rumah'),
+  ('2026-07-12'::date,'Periode 4','Kas Kebersihan','keluar',2100000,'Angkut sampah TPS'),
+  ('2026-07-05'::date,'Periode 3','Kas Umum','keluar',450000,'Beli alat kebersihan taman')
+) v(tgl,periode,kas,tipe,nominal,ket)
 where not exists (select 1 from transaksi);
 
 insert into agenda (tgl, judul, kategori)

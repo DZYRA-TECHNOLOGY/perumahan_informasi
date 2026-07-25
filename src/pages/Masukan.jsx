@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { PageHero, Container } from '../components/ui.jsx'
 import { supabase } from '../lib/supabase.js'
+import { CheckCircle2 } from 'lucide-react'
 
 export default function Masukan() {
   const { dataWarga } = useOutletContext()
@@ -40,7 +41,7 @@ export default function Masukan() {
         <div className="mx-auto max-w-xl card p-6 sm:p-8">
           {done ? (
             <div className="text-center">
-              <div className="text-5xl">✅</div>
+              <CheckCircle2 size={56} className="mx-auto text-emerald-400" strokeWidth={1.5} />
               <h3 className="mt-3 text-xl font-bold">Terima kasih!</h3>
               <p className="mt-1 muted">Masukan Anda sudah kami terima.</p>
               <button onClick={() => setDone(false)} className="btn-orange mt-5">Kirim lagi</button>

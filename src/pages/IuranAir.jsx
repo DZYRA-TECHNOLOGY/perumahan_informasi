@@ -1,11 +1,13 @@
 import { useOutletContext } from 'react-router-dom'
 import { PageHero, Container, rp, PrintButton, PrintHeader } from '../components/ui.jsx'
 import DataTable from '../components/DataTable.jsx'
+import { computeIuranAir } from '../lib/finance.js'
 
 export default function IuranAir() {
   const { iuranAir } = useOutletContext()
   const lunas = iuranAir.filter((x) => x.status === 'Lunas').length
   const belum = iuranAir.length - lunas
+  const { terkumpul, tunggakan } = computeIuranAir(iuranAir)
   return (
     <div>
       <PageHero kicker="Layanan" title="Data Iuran Air"
@@ -13,10 +15,11 @@ export default function IuranAir() {
       <Container>
         <PrintHeader title="Data Iuran Air" />
         <div className="mb-4 flex justify-end no-print"><PrintButton /></div>
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
-          <div className="card p-5"><p className="text-sm muted">Sudah Lunas</p><p className="mt-1 text-3xl font-extrabold text-emerald-400">{lunas}</p></div>
-          <div className="card p-5"><p className="text-sm muted">Belum Bayar</p><p className="mt-1 text-3xl font-extrabold text-rose-400">{belum}</p></div>
-          <div className="card p-5"><p className="text-sm muted">Tagihan / rumah</p><p className="mt-1 text-3xl font-extrabold">{rp(100000)}</p></div>
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="card p-5"><p className="text-sm muted">Terkumpul (Lunas)</p><p className="mt-1 text-2xl font-extrabold text-emerald-400">{rp(terkumpul)}</p><p className="text-xs muted">{lunas} rumah</p></div>
+          <div className="card p-5"><p className="text-sm muted">Tunggakan</p><p className="mt-1 text-2xl font-extrabold text-rose-400">{rp(tunggakan)}</p><p className="text-xs muted">{belum} rumah</p></div>
+          <div className="card p-5"><p className="text-sm muted">Total Tagihan</p><p className="mt-1 text-2xl font-extrabold">{rp(terkumpul + tunggakan)}</p></div>
+          <div className="card p-5"><p className="text-sm muted">Sudah Bayar</p><p className="mt-1 text-2xl font-extrabold text-orange-400">{iuranAir.length ? Math.round((lunas / iuranAir.length) * 100) : 0}%</p></div>
         </div>
         <DataTable
           rows={iuranAir}

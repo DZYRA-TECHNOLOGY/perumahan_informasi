@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Star } from "lucide-react";
 import { rp, Cover, coverProps } from "./ui.jsx";
 
 export default function UsahaGrid({ usaha = [] }) {
@@ -17,7 +18,7 @@ export default function UsahaGrid({ usaha = [] }) {
             </span>
             {u.rating != null && (
               <span className="absolute right-3 top-3 chip bg-white/90 text-zinc-900">
-                ★ {u.rating}
+                <Star size={12} className="fill-amber-400 text-amber-400" /> {u.rating}
               </span>
             )}
           </div>

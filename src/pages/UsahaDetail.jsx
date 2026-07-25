@@ -1,4 +1,5 @@
 import { useParams, useOutletContext, Link } from "react-router-dom";
+import { Star, ArrowLeft, MessageCircle } from "lucide-react";
 import { Container, rp, Cover, coverProps } from "../components/ui.jsx";
 
 export default function UsahaDetail() {
@@ -11,7 +12,7 @@ export default function UsahaDetail() {
       <Container>
         <p className="muted">Usaha tidak ditemukan.</p>
         <Link to="/usaha" className="btn-orange mt-4">
-          ← Kembali ke Usaha Warga
+          <ArrowLeft size={16} /> Kembali ke Usaha Warga
         </Link>
       </Container>
     );
@@ -24,8 +25,8 @@ export default function UsahaDetail() {
       {/* Cover */}
 
       <Container>
-        <Link to="/usaha" className="text-sm font-semibold text-orange-400">
-          ← Semua usaha
+        <Link to="/usaha" className="inline-flex items-center gap-1 text-sm font-semibold text-orange-400">
+          <ArrowLeft size={15} /> Semua usaha
         </Link>
 
         <div className="mt-4 grid gap-8 lg:grid-cols-3">
@@ -37,8 +38,8 @@ export default function UsahaDetail() {
             <Cover {...coverProps(u)} className="h-56 w-full sm:h-80" />
             <div className="mt-2 flex items-center gap-3 text-sm muted">
               {u.rating != null && (
-                <span>
-                  ★ {u.rating} ({u.ulasan ?? 0} ulasan)
+                <span className="inline-flex items-center gap-1">
+                  <Star size={14} className="fill-amber-400 text-amber-400" /> {u.rating} ({u.ulasan ?? 0} ulasan)
                 </span>
               )}
               {u.blok && <span>· Blok {u.blok}</span>}
@@ -75,7 +76,7 @@ export default function UsahaDetail() {
                   rel="noreferrer"
                   className="btn-green mt-5 w-full"
                 >
-                  💬 Hubungi via WhatsApp
+                  <MessageCircle size={18} /> Hubungi via WhatsApp
                 </a>
               )}
               <p className="mt-3 text-center text-xs muted">

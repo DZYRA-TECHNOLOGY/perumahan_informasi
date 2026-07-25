@@ -48,45 +48,21 @@ export const iuran = [
   { jenis: "Iuran Kebersihan", nominal: 15_000, periode: "per bulan" },
 ];
 
-// Kas / saldo (contoh)
+// Kas — HANYA nama + saldo awal (pembukaan). Saldo berjalan DIHITUNG dari transaksi.
 export const kas = [
-  { nama: "Kas Umum", saldo: 4_250_000 },
-  { nama: "Kas Keamanan", saldo: 1_980_000 },
-  { nama: "Kas Kebersihan", saldo: 1_120_000 },
+  { nama: "Kas Umum", saldo_awal: 500_000 },
+  { nama: "Kas Keamanan", saldo_awal: 0 },
+  { nama: "Kas Kebersihan", saldo_awal: 0 },
 ];
 
-// Riwayat transaksi terbaru (contoh)
+// Transaksi = SATU sumber kebenaran keuangan. Ditandai kas & periode.
 export const transaksi = [
-  {
-    tgl: "2026-07-20",
-    ket: "Iuran keamanan 148 rumah",
-    tipe: "masuk",
-    nominal: 4_440_000,
-  },
-  {
-    tgl: "2026-07-18",
-    ket: "Gaji Satpam (Jul)",
-    tipe: "keluar",
-    nominal: 3_600_000,
-  },
-  {
-    tgl: "2026-07-15",
-    ket: "Iuran sampah 148 rumah",
-    tipe: "masuk",
-    nominal: 3_700_000,
-  },
-  {
-    tgl: "2026-07-12",
-    ket: "Angkut sampah TPS",
-    tipe: "keluar",
-    nominal: 2_100_000,
-  },
-  {
-    tgl: "2026-07-05",
-    ket: "Beli alat kebersihan taman",
-    tipe: "keluar",
-    nominal: 450_000,
-  },
+  { tgl: "2026-07-20", periode: "Periode 4", kas: "Kas Keamanan", tipe: "masuk", nominal: 4_440_000, ket: "Iuran keamanan 148 rumah" },
+  { tgl: "2026-07-18", periode: "Periode 4", kas: "Kas Keamanan", tipe: "keluar", nominal: 3_600_000, ket: "Gaji Satpam (Jul)" },
+  { tgl: "2026-07-15", periode: "Periode 4", kas: "Kas Kebersihan", tipe: "masuk", nominal: 3_700_000, ket: "Iuran sampah 148 rumah" },
+  { tgl: "2026-07-12", periode: "Periode 4", kas: "Kas Kebersihan", tipe: "keluar", nominal: 2_100_000, ket: "Angkut sampah TPS" },
+  { tgl: "2026-07-05", periode: "Periode 3", kas: "Kas Umum", tipe: "keluar", nominal: 450_000, ket: "Beli alat kebersihan taman" },
+  { tgl: "2026-07-01", periode: "Periode 3", kas: "Kas Umum", tipe: "masuk", nominal: 885_000, ket: "Sisa saldo periode sebelumnya" },
 ];
 
 // Jadwal kebersihan & agenda (contoh)
@@ -532,11 +508,11 @@ export const keuanganRows = keuanganPeriode.flatMap((p) =>
 
 // IDE BARU: kontak darurat.
 export const kontakDarurat = [
-  { label: "Pos Satpam / Keamanan", nomor: "0812-0000-1111", icon: "🛡️" },
-  { label: "Ketua RT", nomor: "0812-0000-0000", icon: "🧑‍💼" },
-  { label: "Ambulans / Puskesmas", nomor: "119", icon: "🚑" },
-  { label: "Pemadam Kebakaran", nomor: "113", icon: "🚒" },
-  { label: "PLN Gangguan", nomor: "123", icon: "⚡" },
+  { label: "Pos Satpam / Keamanan", nomor: "0812-0000-1111", icon: "ShieldCheck" },
+  { label: "Ketua RT", nomor: "0812-0000-0000", icon: "UserCog" },
+  { label: "Ambulans / Puskesmas", nomor: "119", icon: "Ambulance" },
+  { label: "Pemadam Kebakaran", nomor: "113", icon: "Flame" },
+  { label: "PLN Gangguan", nomor: "123", icon: "Zap" },
 ];
 
 // IDE BARU: galeri kegiatan.

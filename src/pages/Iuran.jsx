@@ -1,5 +1,9 @@
 import { useOutletContext } from 'react-router-dom'
 import { PageHero, Container, rp } from '../components/ui.jsx'
+import { IconBox } from '../components/icons.jsx'
+import { Trash2, ShieldCheck, Sparkles } from 'lucide-react'
+
+const ICONS = [Trash2, ShieldCheck, Sparkles]
 
 export default function Iuran() {
   const { iuran } = useOutletContext()
@@ -12,7 +16,7 @@ export default function Iuran() {
         <div className="grid gap-5 sm:grid-cols-3">
           {iuran.map((i, idx) => (
             <div key={idx} className="card card-hover p-6">
-              <div className="text-3xl">{['🗑️', '🛡️', '🧹'][idx % 3]}</div>
+              <IconBox Comp={ICONS[idx % 3]} size={22} className="h-12 w-12" />
               <p className="mt-3 text-sm muted">{i.jenis}</p>
               <p className="mt-1 text-4xl font-extrabold text-orange-500">{rp(i.nominal)}</p>
               <p className="mt-1 text-xs muted">{i.periode}</p>

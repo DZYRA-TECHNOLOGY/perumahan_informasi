@@ -1,3 +1,5 @@
+import { Printer, Store } from 'lucide-react'
+
 export const rp = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID')
 
 // Foto default per kategori (Unsplash). Dipakai kalau item tak punya `foto` sendiri.
@@ -23,11 +25,13 @@ export function coverProps(item = {}) {
   }
 }
 
-// Cover dengan foto di atas gradient+emoji; kalau foto gagal dimuat, emoji tampil.
-export function Cover({ foto, emoji, warna, className = '' }) {
+// Cover dengan foto di atas gradient; kalau foto gagal dimuat, ikon netral tampil.
+export function Cover({ foto, warna, className = '' }) {
   return (
     <div className={`relative overflow-hidden bg-gradient-to-br ${warna} ${className}`}>
-      <span className="absolute inset-0 grid place-items-center text-6xl opacity-95">{emoji}</span>
+      <span className="absolute inset-0 grid place-items-center text-white/60">
+        <Store size={40} strokeWidth={1.5} />
+      </span>
       {foto && (
         <img src={foto} alt="" loading="lazy"
           className="relative h-full w-full object-cover"
@@ -59,7 +63,7 @@ export function Container({ children, className = '' }) {
 export function PrintButton({ label = 'Cetak Laporan' }) {
   return (
     <button onClick={() => window.print()} className="btn-outline no-print text-sm">
-      🖨️ {label}
+      <Printer size={16} /> {label}
     </button>
   )
 }
