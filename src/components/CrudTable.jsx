@@ -70,6 +70,7 @@ export default function CrudTable({
   fields,
   fallback = [],
   onChanged,
+  preview = false,
 }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -102,7 +103,7 @@ export default function CrudTable({
 
   const load = async () => {
     setLoading(true);
-    if (!supabase) {
+    if (preview || !supabase) {
       setRows(fallback);
       setDemo(true);
       setLoading(false);
@@ -126,6 +127,10 @@ export default function CrudTable({
   }, []);
 
   const openNew = () => {
+    if (preview) {
+      alert("Mode preview — klik Masuk untuk menambah/mengelola data asli.");
+      return;
+    }
     setForm({});
     setEditing("new");
   };
@@ -170,6 +175,10 @@ export default function CrudTable({
   };
 
   const remove = async (row) => {
+    if (preview) {
+      alert("Mode preview — klik Masuk untuk mengelola data asli.");
+      return;
+    }
     if (!window.confirm("Hapus data ini?")) return;
     if (!supabase) {
       alert("Mode demo: hubungkan Supabase untuk menghapus.");
@@ -211,9 +220,10 @@ export default function CrudTable({
         <div>
           <h3 className="text-lg font-bold">{title}</h3>
           {demo && (
-            <p className="text-xs text-amber-600">
-              Menampilkan data demo — buat tabel <code>{table}</code> di
-              Supabase untuk mengelola data asli.
+            <p className="text-xs text-amber-500/90">
+              {preview
+                ? "Menampilkan data contoh (mode preview) — klik Masuk untuk mengelola data asli."
+                : (<>Menampilkan data demo — buat tabel <code>{table}</code> di Supabase untuk mengelola data asli.</>)}
             </p>
           )}
         </div>

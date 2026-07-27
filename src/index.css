@@ -115,6 +115,10 @@ body::before {
   .btn-green {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition;
   }
+  .btn-teal {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 font-semibold text-white shadow-sm transition
+           bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 active:scale-[0.98];
+  }
   .chip {
     @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium;
   }

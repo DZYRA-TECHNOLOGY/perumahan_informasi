@@ -13,7 +13,9 @@ export function computeKas(kasList = [], transaksi = []) {
       ...transaksi.map((t) => t.kas).filter(Boolean),
     ]),
   ];
-  const awal = Object.fromEntries(kasList.map((k) => [k.nama, n(k.saldo_awal)]));
+  const awal = Object.fromEntries(
+    kasList.map((k) => [k.nama, n(k.saldo_awal)]),
+  );
 
   const rows = names.map((nama) => {
     const t = transaksi.filter((x) => (x.kas || "") === nama);
@@ -58,4 +60,34 @@ export function computeIuranAir(rows = []) {
     .filter((r) => r.status !== "Lunas")
     .reduce((s, r) => s + n(r.tagihan), 0);
   return { terkumpul, tunggakan, total: terkumpul + tunggakan };
+}
+// const n = (v) => Number(v || 0);
+
+export function computeKasTagihan(kasTagihan = [], kasPembayaran = []) {
+  const totalTagihan = kasTagihan.reduce((s, r) => s + n(r.nominal), 0);
+
+  const totalLunas = kasTagihan
+    .filter((r) => r.status === "Lunas")
+    .reduce((s, r) => s + n(r.nominal), 0);
+
+  const totalMenunggu = kasPembayaran
+    .filter((r) => r.status === "Menunggu")
+    .reduce((s, r) => s + n(r.nominal), 0);
+
+  const totalDisetujui = kasPembayaran
+    .filter((r) => r.status === "Disetujui")
+    .reduce((s, r) => s + n(r.nominal), 0);
+
+  const totalTunggakan = kasTagihan
+    .filter((r) => r.status !== "Lunas")
+    .reduce((s, r) => s + n(r.nominal), 0);
+
+  return {
+    totalTagihan,
+    totalLunas,
+    totalMenunggu,
+    totalDisetujui,
+    totalTunggakan,
+    sisaTagihan: Math.max(0, totalTagihan - totalDisetujui),
+  };
 }

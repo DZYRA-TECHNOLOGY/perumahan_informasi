@@ -2,13 +2,36 @@ import { useEffect, useState } from "react";
 import { supabase, isSupabaseReady } from "../lib/supabase.js";
 import CrudTable from "./CrudTable.jsx";
 import LeafletMap from "./LeafletMap.jsx";
+import TagihanManager from "./TagihanManager.jsx";
 import { Icon } from "./icons.jsx";
 import { computeKas } from "../lib/finance.js";
 import * as local from "../data/siteplan.js";
-
+import { Printer, Store } from "lucide-react";
+import KasPembayaranForm from "./KasPembayaranForm.jsx";
 const rp = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
+const fmtTgl = (t) => {
+  const d = new Date(t);
+  if (isNaN(d)) return { d: "--", m: "" };
+  return {
+    d: String(d.getDate()).padStart(2, "0"),
+    m: [
+      "JAN",
+      "FEB",
+      "MAR",
+      "APR",
+      "MEI",
+      "JUN",
+      "JUL",
+      "AGU",
+      "SEP",
+      "OKT",
+      "NOV",
+      "DES",
+    ][d.getMonth()],
+  };
+};
 
-/* ---------------- Login ---------------- */
+// ===== LOGIN =====
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -67,21 +90,25 @@ function Login() {
             {busy ? "Memproses…" : "Masuk"}
           </button>
         </form>
-        <p className="mt-4 text-xs muted">
-          Akun dibuat di Supabase → Authentication → Users (centang Auto
-          Confirm).
-        </p>
       </div>
     </div>
   );
 }
 
-/* ---------------- Overview ---------------- */
-function Overview() {
-  // Selalu tampilkan data ASLI dari database (kosong = kosong), bukan data contoh.
-  const [d, setD] = useState({ kas: [], transaksi: [], usaha: [], agenda: [] });
+// ===== OVERVIEW =====
+function Overview({ preview }) {
+  const demo = {
+    kas: local.kas,
+    transaksi: local.transaksi,
+    usaha: local.usahaWarga,
+    agenda: local.agenda,
+  };
+  const [d, setD] = useState(
+    preview ? demo : { kas: [], transaksi: [], usaha: [], agenda: [] },
+  );
+
   useEffect(() => {
-    if (!supabase) return;
+    if (preview || !supabase) return;
     (async () => {
       const t = async (n) => (await supabase.from(n).select("*")).data ?? [];
       setD({
@@ -91,79 +118,197 @@ function Overview() {
         agenda: await t("agenda"),
       });
     })();
-  }, []);
-  // Saldo total dihitung otomatis dari saldo awal + transaksi.
-  const { total: totalKas, totalMasuk: masuk, totalKeluar: keluar } = computeKas(
-    d.kas,
-    d.transaksi,
-  );
+  }, [preview]);
+
+  const {
+    rows: kasRows,
+    total,
+    totalMasuk,
+    totalKeluar,
+  } = computeKas(d.kas, d.transaksi);
+  const maxSaldo = Math.max(1, ...kasRows.map((k) => Math.abs(k.saldo)));
+
   const stats = [
     {
       l: "Total Saldo Kas",
-      v: rp(totalKas),
-      c: "text-emerald-500",
+      v: rp(total),
+      c: "text-emerald-400",
+      ring: "ring-emerald-500/20 bg-emerald-500/10",
       icon: "Landmark",
+      sub: "Saldo berjalan",
     },
     {
       l: "Total Pemasukan",
-      v: rp(masuk),
-      c: "text-teal-500",
+      v: rp(totalMasuk),
+      c: "text-teal-300",
+      ring: "ring-teal-500/20 bg-teal-500/10",
       icon: "ArrowDownCircle",
+      sub: "Seluruh periode",
     },
     {
       l: "Total Pengeluaran",
-      v: rp(keluar),
-      c: "text-rose-500",
+      v: rp(totalKeluar),
+      c: "text-rose-400",
+      ring: "ring-rose-500/20 bg-rose-500/10",
       icon: "ArrowUpCircle",
+      sub: "Seluruh periode",
     },
-    { l: "Usaha Warga", v: d.usaha.length, c: "text-sky-500", icon: "Store" },
+    {
+      l: "Usaha Warga",
+      v: d.usaha.length,
+      c: "text-sky-300",
+      ring: "ring-sky-500/20 bg-sky-500/10",
+      icon: "Store",
+      sub: "Terdaftar",
+    },
   ];
+
+  const recent = [...d.transaksi].reverse().slice(0, 5);
+
   return (
-    <div>
-      <h3 className="mb-4 text-lg font-bold lg:text-xl">Ringkasan</h3>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-6">
+      {/* Stats Grid - Responsive */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
           <div
             key={s.l}
-            className="card p-5 lg:p-6 transition hover:shadow-lg hover:shadow-black/5"
+            className="card p-4 sm:p-5 transition hover:-translate-y-0.5 hover:ring-white/20"
           >
             <div className="flex items-start justify-between">
-              <p className="text-sm muted">{s.l}</p>
-              <Icon
-                name={s.icon}
-                size={18}
-                strokeWidth={1.75}
-                className={`shrink-0 opacity-60 ${s.c}`}
-              />
+              <p className="text-xs sm:text-sm muted">{s.l}</p>
+              <span
+                className={`grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-xl ring-1 ${s.ring}`}
+              >
+                <Icon
+                  name={s.icon}
+                  size={16}
+                  strokeWidth={1.9}
+                  className={s.c}
+                />
+              </span>
             </div>
-            <p className={`mt-1 text-2xl font-extrabold lg:text-3xl ${s.c}`}>
+            <p
+              className={`mt-2 text-xl sm:text-2xl lg:text-[26px] font-extrabold ${s.c}`}
+            >
               {s.v}
             </p>
+            <p className="mt-0.5 text-xs muted">{s.sub}</p>
           </div>
         ))}
       </div>
-      <div className="mt-6 card p-5 lg:p-6">
-        <p className="font-semibold">Agenda terdekat</p>
-        <ul className="mt-3 space-y-2 text-sm">
-          {d.agenda.slice(0, 5).map((a, i) => (
-            <li
-              key={i}
-              className="flex justify-between border-b border-white/5 pb-2"
-            >
-              <span>{a.judul}</span>
-              <span className="muted">{a.tgl}</span>
-            </li>
-          ))}
-          {d.agenda.length === 0 && (
-            <li className="muted">Belum ada agenda.</li>
-          )}
-        </ul>
+
+      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+        {/* Saldo per Kas */}
+        <div className="card p-4 sm:p-5 lg:p-6">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm sm:text-base">Saldo per Kas</h3>
+            <span className="text-xs muted">{kasRows.length} kas</span>
+          </div>
+          <div className="mt-4 space-y-4">
+            {kasRows.length === 0 && (
+              <p className="text-sm muted">Belum ada kas.</p>
+            )}
+            {kasRows.map((k) => (
+              <div key={k.nama}>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{k.nama}</span>
+                  <span className="font-semibold text-emerald-400">
+                    {rp(k.saldo)}
+                  </span>
+                </div>
+                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/5">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+                    style={{
+                      width: `${Math.max(4, (Math.abs(k.saldo) / maxSaldo) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 border-t border-white/5 pt-5">
+            <h4 className="mb-3 font-bold text-sm sm:text-base">
+              Transaksi terbaru
+            </h4>
+            <ul className="space-y-1">
+              {recent.length === 0 && (
+                <li className="text-sm muted">Belum ada transaksi.</li>
+              )}
+              {recent.map((t, i) => {
+                const masuk = t.tipe === "masuk";
+                return (
+                  <li
+                    key={i}
+                    className="flex items-center gap-2 sm:gap-3 rounded-xl px-2 py-2 hover:bg-white/[0.03]"
+                  >
+                    <span
+                      className={`grid h-8 w-8 sm:h-9 sm:w-9 shrink-0 place-items-center rounded-lg ring-1 ${masuk ? "bg-emerald-500/10 ring-emerald-500/20" : "bg-rose-500/10 ring-rose-500/20"}`}
+                    >
+                      <Icon
+                        name={masuk ? "ArrowDownLeft" : "ArrowUpRight"}
+                        size={15}
+                        className={masuk ? "text-emerald-400" : "text-rose-400"}
+                      />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs sm:text-sm font-medium">
+                        {t.ket || "Transaksi"}
+                      </p>
+                      <p className="text-xs muted">
+                        {t.tgl} · {t.kas || "-"}
+                      </p>
+                    </div>
+                    <span
+                      className={`whitespace-nowrap text-xs sm:text-sm font-semibold ${masuk ? "text-emerald-400" : "text-rose-400"}`}
+                    >
+                      {masuk ? "+" : "−"} {rp(t.nominal)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+
+        {/* Agenda */}
+        <div className="card h-fit p-4 sm:p-5 lg:p-6">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm sm:text-base">Agenda terdekat</h3>
+            <Icon name="CalendarDays" size={16} className="muted" />
+          </div>
+          <ul className="mt-4 space-y-3">
+            {d.agenda.length === 0 && (
+              <li className="text-sm muted">Belum ada agenda.</li>
+            )}
+            {d.agenda.slice(0, 5).map((a, i) => {
+              const { d: dd, m } = fmtTgl(a.tgl);
+              return (
+                <li key={i} className="flex items-center gap-3">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 ring-1 ring-white/10">
+                    <span className="text-[10px] font-semibold text-teal-300">
+                      {m}
+                    </span>
+                    <span className="-mt-0.5 text-sm font-extrabold leading-none">
+                      {dd}
+                    </span>
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{a.judul}</p>
+                    <p className="text-xs muted">{a.kategori}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ---------------- Pengaturan Lokasi / Peta ---------------- */
+// ===== LOKASI FORM =====
 function LokasiForm({ onChanged }) {
   const [f, setF] = useState(local.lokasi);
   const [busy, setBusy] = useState(false);
@@ -209,13 +354,12 @@ function LokasiForm({ onChanged }) {
     <div>
       <h3 className="mb-1 text-lg font-bold lg:text-xl">Lokasi & Peta</h3>
       <p className="mb-5 text-sm muted">
-        Atur titik peta yang tampil di beranda. Isi koordinat (lat/lng) — cari
-        di Google Maps, klik kanan lokasi → angka pertama = latitude, kedua =
-        longitude.
+        Atur titik peta yang tampil di beranda.
       </p>
+
       <div className="grid gap-6 lg:grid-cols-2 xl:gap-8">
-        <form onSubmit={save} className="card space-y-3 p-5 lg:p-6">
-          <div className="grid grid-cols-3 gap-3">
+        <form onSubmit={save} className="card space-y-3 p-4 sm:p-5 lg:p-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <label className="block">
               <span className="mb-1 block text-xs font-medium muted">
                 Latitude
@@ -272,7 +416,7 @@ function LokasiForm({ onChanged }) {
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium muted">
-              Embed URL (opsional — dari Google Maps "Sematkan peta")
+              Embed URL (opsional)
             </span>
             <input
               className="field"
@@ -294,6 +438,7 @@ function LokasiForm({ onChanged }) {
             )}
           </div>
         </form>
+
         <div>
           <p className="mb-2 text-sm font-medium muted">
             Pilih lokasi — klik atau geser pin di peta
@@ -302,7 +447,7 @@ function LokasiForm({ onChanged }) {
             lat={Number(f.lat) || -5.3581}
             lng={Number(f.lng) || 105.3149}
             zoom={Number(f.zoom) || 16}
-            height={320}
+            height={300}
             onPick={(la, ln) =>
               setF((prev) => ({
                 ...prev,
@@ -320,27 +465,52 @@ function LokasiForm({ onChanged }) {
   );
 }
 
-/* ---------------- Dashboard shell ---------------- */
-const MENU = [
-  { key: "ringkasan", label: "Ringkasan", icon: "LayoutDashboard" },
-  { key: "transaksi", label: "Transaksi Kas", icon: "ArrowRightLeft" },
-  { key: "kas", label: "Saldo Kas", icon: "Landmark" },
-  { key: "iuran", label: "Iuran", icon: "ReceiptText" },
-  { key: "agenda", label: "Agenda", icon: "CalendarDays" },
-  { key: "usaha", label: "Usaha Warga", icon: "Store" },
-  { key: "pengumuman", label: "Pengumuman", icon: "Megaphone" },
-  { key: "data_warga", label: "Data Warga", icon: "Users" },
-  { key: "iuran_air", label: "Iuran Air", icon: "Droplets" },
-  { key: "banjir_kontribusi", label: "Dana Banjir (Masuk)", icon: "Waves" },
+// ===== MENU & PANELS =====
+const SECTIONS = [
   {
-    key: "banjir_pengeluaran",
-    label: "Dana Banjir (Keluar)",
-    icon: "HandCoins",
+    label: "Beranda",
+    items: [{ key: "ringkasan", label: "Ringkasan", icon: "LayoutDashboard" }],
   },
-  { key: "struktur", label: "Struktur Organisasi", icon: "Building2" },
-  { key: "lokasi", label: "Lokasi & Peta", icon: "MapPin" },
-  { key: "masukan", label: "Kotak Masukan", icon: "Inbox" },
+  {
+    label: "Keuangan",
+    items: [
+      { key: "transaksi", label: "Transaksi Kas", icon: "ArrowRightLeft" },
+      { key: "kas", label: "Saldo Kas", icon: "Landmark" },
+      { key: "kas_master", label: "Jenis Iuran", icon: "ReceiptText" },
+      { key: "kas_tagihan", label: "Tagihan Kas", icon: "ClipboardList" },
+      { key: "kas_pembayaran", label: "Pembayaran Masuk", icon: "Wallet" },
+      { key: "banjir_kontribusi", label: "Dana Banjir (Masuk)", icon: "Waves" },
+      {
+        key: "banjir_pengeluaran",
+        label: "Dana Banjir (Keluar)",
+        icon: "HandCoins",
+      },
+    ],
+  },
+  {
+    label: "Informasi",
+    items: [
+      { key: "agenda", label: "Agenda", icon: "CalendarDays" },
+      { key: "pengumuman", label: "Pengumuman", icon: "Megaphone" },
+      { key: "usaha", label: "Usaha Warga", icon: "Store" },
+      { key: "struktur", label: "Struktur Organisasi", icon: "Building2" },
+      { key: "hunian_listing", label: "Hunian Tersedia", icon: "Home" },
+    ],
+  },
+  {
+    label: "Data",
+    items: [
+      { key: "data_warga", label: "Data Warga", icon: "Users" },
+      { key: "masukan", label: "Kotak Masukan", icon: "Inbox" },
+    ],
+  },
+  {
+    label: "Pengaturan",
+    items: [{ key: "lokasi", label: "Lokasi & Peta", icon: "MapPin" }],
+  },
 ];
+
+const MENU = SECTIONS.flatMap((s) => s.items);
 
 const PANELS = {
   transaksi: {
@@ -349,8 +519,16 @@ const PANELS = {
     fallback: local.transaksi,
     fields: [
       { name: "tgl", label: "Tanggal", type: "date" },
-      { name: "periode", label: "Periode", options: ["Periode 1", "Periode 2", "Periode 3", "Periode 4"] },
-      { name: "kas", label: "Masuk ke Kas", options: ["Kas Umum", "Kas Keamanan", "Kas Kebersihan"] },
+      {
+        name: "periode",
+        label: "Periode",
+        options: ["Periode 1", "Periode 2", "Periode 3", "Periode 4"],
+      },
+      {
+        name: "kas",
+        label: "Masuk ke Kas",
+        options: ["Kas Umum", "Kas Keamanan", "Kas Kebersihan"],
+      },
       { name: "tipe", label: "Tipe", options: ["masuk", "keluar"] },
       { name: "nominal", label: "Nominal", type: "number", money: true },
       { name: "ket", label: "Keterangan" },
@@ -500,43 +678,133 @@ const PANELS = {
       { name: "foto", label: "Foto", type: "image", optional: true },
     ],
   },
+  hunian_listing: {
+    title: "Hunian Tersedia",
+    table: "hunian_listing",
+    fallback: [],
+    fields: [
+      { name: "tipe", label: "Tipe", options: ["Kontrak", "Dijual"] },
+      { name: "judul", label: "Judul" },
+      { name: "blok", label: "Blok / Unit" },
+      { name: "kt", label: "KT (Kamar Tidur)", type: "number" },
+      { name: "km", label: "KM (Kamar Mandi)", type: "number" },
+      { name: "harga", label: "Harga", type: "number", money: true },
+      { name: "satuan", label: "Satuan" },
+      { name: "wa", label: "WhatsApp" },
+      { name: "deskripsi", label: "Deskripsi" },
+      { name: "foto", label: "Foto", type: "image", optional: true },
+      {
+        name: "status",
+        label: "Status",
+        options: ["Aktif", "Selesai", "Nonaktif"],
+      },
+    ],
+  },
+  kas_master: {
+    title: "Jenis Iuran",
+    table: "kas_master",
+    fallback: [],
+    fields: [
+      { name: "nama", label: "Nama Iuran (mis. Iuran Air)" },
+      { name: "nominal", label: "Nominal default", type: "number", money: true },
+      { name: "aktif", label: "Aktif", options: ["true", "false"] },
+    ],
+  },
+  kas_tagihan: {
+    title: "Tagihan Bulanan",
+    table: "kas_tagihan",
+    fallback: [],
+    fields: [
+      { name: "blok", label: "Blok" },
+      { name: "nama", label: "Nama" },
+      { name: "periode", label: "Periode" },
+      { name: "nominal", label: "Nominal", type: "number", money: true },
+      {
+        name: "jatuh_tempo",
+        label: "Jatuh Tempo",
+        type: "date",
+        optional: true,
+      },
+      {
+        name: "status",
+        label: "Status",
+        options: ["Belum Bayar", "Menunggu", "Lunas", "Terlambat"],
+      },
+      { name: "catatan", label: "Catatan", optional: true },
+    ],
+  },
+  kas_pembayaran: {
+    title: "Pembayaran Masuk",
+    table: "kas_pembayaran",
+    fallback: [],
+    fields: [
+      { name: "tagihan_id", label: "ID Tagihan", type: "number" },
+      { name: "blok", label: "Blok" },
+      { name: "nama", label: "Nama" },
+      { name: "periode", label: "Periode" },
+      { name: "nominal", label: "Nominal", type: "number", money: true },
+      { name: "metode", label: "Metode" },
+      { name: "bukti", label: "Bukti", type: "image", optional: true },
+      {
+        name: "status",
+        label: "Status",
+        options: ["Menunggu", "Disetujui", "Ditolak"],
+      },
+      { name: "catatan", label: "Catatan", optional: true },
+      { name: "diverifikasi_oleh", label: "Diverifikasi Oleh", optional: true },
+    ],
+  },
 };
 
-/* ---------------- Sidebar / navigasi ---------------- */
+// ===== NAV LIST =====
 function NavList({ tab, setTab, onNavigate }) {
   return (
-    <nav className="space-y-1">
-      {MENU.map((m) => (
-        <button
-          key={m.key}
-          onClick={() => {
-            setTab(m.key);
-            onNavigate?.();
-          }}
-          className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-            tab === m.key
-              ? "bg-teal-500 text-white shadow-md shadow-teal-500/20"
-              : "text-zinc-200 hover:bg-white/5"
-          }`}
-        >
-          <Icon
-            name={m.icon}
-            size={16}
-            strokeWidth={1.75}
-            className="shrink-0"
-          />
-          {m.label}
-        </button>
+    <nav className="space-y-3">
+      {SECTIONS.map((sec) => (
+        <div key={sec.label}>
+          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+            {sec.label}
+          </p>
+          <div className="space-y-0.5">
+            {sec.items.map((m) => {
+              const active = tab === m.key;
+              return (
+                <button
+                  key={m.key}
+                  onClick={() => {
+                    setTab(m.key);
+                    onNavigate?.();
+                  }}
+                  className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                    active
+                      ? "bg-teal-500 text-white shadow-md shadow-teal-500/20"
+                      : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <Icon
+                    name={m.icon}
+                    size={16}
+                    strokeWidth={1.75}
+                    className={`shrink-0 ${active ? "" : "text-zinc-400"}`}
+                  />
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       ))}
     </nav>
   );
 }
 
+// ===== MAIN ADMIN =====
 export default function Admin({ onChanged }) {
   const [session, setSession] = useState(null);
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState("ringkasan");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -553,7 +821,6 @@ export default function Admin({ onChanged }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Kunci scroll body saat drawer mobile terbuka
   useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
     return () => {
@@ -572,106 +839,167 @@ export default function Admin({ onChanged }) {
     );
   }
   if (!ready) return <p className="text-center muted">Memuat…</p>;
-  if (!session) return <Login />;
+  if (showLogin && !session) return <Login />;
 
+  const preview = !session;
   const activeMenu = MENU.find((m) => m.key === tab);
+  const activeSection = SECTIONS.find((s) =>
+    s.items.some((i) => i.key === tab),
+  )?.label;
+  const subtitle =
+    {
+      ringkasan: "Snapshot kondisi cluster saat ini.",
+    }[tab] || `Kelola data ${activeMenu?.label?.toLowerCase()}.`;
 
+  const UserChip = () => (
+    <div className="mb-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 font-black text-white shadow-lg shadow-teal-500/20">
+        S
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">
+          {preview ? "Tamu" : session.user.email.split("@")[0]}
+        </p>
+        <p className="text-xs muted">{preview ? "Preview" : "Pengurus"}</p>
+      </div>
+    </div>
+  );
+
+  const ActionButton = () =>
+    preview ? (
+      <button
+        onClick={() => setShowLogin(true)}
+        className="btn-teal mt-3 w-full text-sm"
+      >
+        <Icon name="LogIn" size={15} strokeWidth={2} /> Masuk
+      </button>
+    ) : (
+      <button
+        onClick={() => supabase.auth.signOut()}
+        className="btn-outline mt-3 w-full text-sm"
+      >
+        <Icon name="LogOut" size={15} strokeWidth={2} /> Keluar
+      </button>
+    );
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-3 sm:px-5 lg:px-8 2xl:px-10">
-      {/* Header mobile: judul + tombol menu */}
+    <div className="mx-auto w-full max-w-[1800px] px-3 sm:px-6 lg:px-8 xl:px-10">
+      {/* Mobile Header */}
       <div className="mb-4 flex items-center justify-between md:hidden">
         <div>
           <h2 className="text-xl font-bold">Panel Pengurus</h2>
-          <p className="text-xs muted">{session.user.email}</p>
+          <p className="text-xs muted">
+            {preview ? "Mode preview" : session.user.email}
+          </p>
         </div>
         <button
           onClick={() => setMobileMenuOpen(true)}
           className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-zinc-100 active:scale-95"
-          aria-label="Buka menu"
         >
           <Icon name="Menu" size={20} strokeWidth={1.75} />
         </button>
       </div>
 
-      {/* Drawer mobile */}
+      {/* Preview Banner */}
+      {preview && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <p className="flex items-center gap-2 text-sm text-amber-200">
+            <Icon name="Eye" size={16} strokeWidth={1.9} /> Mode preview —
+            menampilkan data contoh tanpa login.
+          </p>
+          <button
+            onClick={() => setShowLogin(true)}
+            className="btn-teal text-sm"
+          >
+            <Icon name="LogIn" size={15} strokeWidth={2} /> Masuk
+          </button>
+        </div>
+      )}
+
+      {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="absolute left-0 top-0 h-full w-[82%] max-w-xs overflow-y-auto bg-zinc-950 p-4 shadow-2xl animate-in slide-in-from-left duration-200">
-            <div className="mb-4 flex items-center justify-between px-1">
-              <p className="text-xs font-semibold uppercase tracking-wide muted">
-                Menu
-              </p>
+          <div className="absolute left-0 top-0 h-full w-[85%] max-w-sm overflow-y-auto bg-zinc-950 p-4 shadow-2xl">
+            <div className="mb-3 flex items-center justify-end">
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="grid h-8 w-8 place-items-center rounded-lg hover:bg-white/5"
-                aria-label="Tutup menu"
               >
                 <Icon name="X" size={18} strokeWidth={1.75} />
               </button>
             </div>
+            <UserChip />
             <NavList
               tab={tab}
               setTab={setTab}
               onNavigate={() => setMobileMenuOpen(false)}
             />
-            <button
-              onClick={() => supabase.auth.signOut()}
-              className="btn-outline mt-4 w-full text-sm"
-            >
-              Keluar
-            </button>
+            <ActionButton />
           </div>
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-[230px_1fr] lg:grid-cols-[260px_1fr] lg:gap-8 xl:grid-cols-[280px_1fr]">
-        {/* Sidebar desktop */}
+      {/* Main Grid - Lebih lebar di desktop */}
+      <div className="grid gap-6 md:grid-cols-[240px_1fr] lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr] 2xl:grid-cols-[320px_1fr]">
+        {/* Sidebar Desktop */}
         <aside className="hidden md:block md:sticky md:top-24 md:h-fit">
           <div className="card p-3 lg:p-4">
-            <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide muted">
-              Menu
-            </p>
+            <UserChip />
             <NavList tab={tab} setTab={setTab} />
           </div>
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="btn-outline mt-3 w-full text-sm"
-          >
-            Keluar
-          </button>
+          <ActionButton />
         </aside>
 
         {/* Content */}
         <section className="min-w-0 pb-10">
-          <div className="mb-5 hidden items-center justify-between md:flex">
-            <div>
-              <h2 className="text-2xl font-bold lg:text-3xl">Panel Pengurus</h2>
-              <p className="text-sm muted">{session.user.email}</p>
+          {/* Breadcrumb & Title */}
+          <div className="mb-4 sm:mb-5">
+            <div className="flex items-center gap-1.5 text-xs muted">
+              <Icon name="Home" size={13} />
+              <span>Panel</span>
+              <Icon name="ChevronRight" size={13} />
+              <span className="text-zinc-300">{activeSection}</span>
             </div>
-          </div>
-
-          {/* Label tab aktif di mobile */}
-          <div className="mb-4 flex items-center gap-2 md:hidden">
-            <Icon
-              name={activeMenu?.icon || "LayoutDashboard"}
-              size={18}
-              strokeWidth={1.75}
-              className="text-teal-500"
-            />
-            <h3 className="text-base font-bold">{activeMenu?.label}</h3>
+            <div className="mt-1.5 flex items-center gap-3">
+              <span className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-xl bg-teal-500/10 ring-1 ring-teal-500/20">
+                <Icon
+                  name={activeMenu?.icon || "LayoutDashboard"}
+                  size={18}
+                  strokeWidth={1.8}
+                  className="text-teal-400"
+                />
+              </span>
+              <div>
+                <h2 className="text-xl sm:text-2xl lg:text-[26px] font-bold">
+                  {activeMenu?.label}
+                </h2>
+                <p className="text-xs sm:text-sm muted">{subtitle}</p>
+              </div>
+            </div>
           </div>
 
           <div className="lg:max-w-none">
             {tab === "ringkasan" ? (
-              <Overview />
+              <Overview preview={preview} />
             ) : tab === "lokasi" ? (
               <LokasiForm onChanged={onChanged} />
+            ) : tab === "kas_pembayaran" ? (
+              <KasPembayaranForm
+                onChanged={onChanged}
+                verifierEmail={session?.user?.email}
+              />
+            ) : tab === "kas_tagihan" ? (
+              <TagihanManager preview={preview} onChanged={onChanged} />
             ) : (
-              <CrudTable key={tab} {...PANELS[tab]} onChanged={onChanged} />
+              <CrudTable
+                key={tab}
+                {...PANELS[tab]}
+                preview={preview}
+                onChanged={onChanged}
+              />
             )}
           </div>
         </section>

@@ -5,6 +5,8 @@ import {
   Ambulance, Flame, Zap, Phone, PieChart, Vote, Home, MessageSquare, Images,
   ArrowRight, ExternalLink, Menu, X, Printer, Search, Pencil, Plus, LogOut,
   ChevronDown, Crown, HelpCircle,
+  ArrowDownCircle, ArrowUpCircle, ArrowUpRight, ArrowDownLeft, TrendingUp,
+  Eye, LogIn, ChevronRight,
 } from "lucide-react";
 
 const REG = {
@@ -14,6 +16,8 @@ const REG = {
   Ambulance, Flame, Zap, Phone, PieChart, Vote, Home, MessageSquare, Images,
   ArrowRight, ExternalLink, Menu, X, Printer, Search, Pencil, Plus, LogOut,
   ChevronDown, Crown,
+  ArrowDownCircle, ArrowUpCircle, ArrowUpRight, ArrowDownLeft, TrendingUp,
+  Eye, LogIn, ChevronRight,
 };
 
 // <Icon name="Users" /> — dipakai untuk ikon yang datang dari data (string).

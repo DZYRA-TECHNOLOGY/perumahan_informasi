@@ -1,13 +1,7 @@
 import { Link, useOutletContext } from "react-router-dom";
-import {
-  profil,
-  blok,
-  hunian,
-  jadwalSampah,
-  dataWarga,
-  banjirKontribusi,
-  BANJIR_BULAN,
-} from "../data/siteplan.js";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase.js";
+import { profil, blok, jadwalSampah, BANJIR_BULAN } from "../data/siteplan.js";
 import { rp } from "../components/ui.jsx";
 import Voting from "../components/Voting.jsx";
 import Donut from "../components/Donut.jsx";
@@ -15,13 +9,27 @@ import MapEmbed from "../components/MapEmbed.jsx";
 import { IconBox } from "../components/icons.jsx";
 import { computeKas } from "../lib/finance.js";
 import {
-  Users, Wallet, Waves, CalendarDays, Store, ReceiptText, Landmark, Map,
-  KeyRound, Megaphone, ArrowRight, BarChart3, Home as HomeIcon,
+  Users,
+  Wallet,
+  Waves,
+  CalendarDays,
+  Store,
+  ReceiptText,
+  Landmark,
+  Map,
+  KeyRound,
+  Megaphone,
+  ArrowRight,
+  BarChart3,
+  Home as HomeIcon,
 } from "lucide-react";
 
 function DashCard({ to, Icon, label, value, unit, cta }) {
   return (
-    <Link to={to} className="card card-hover flex flex-col items-center p-5 text-center">
+    <Link
+      to={to}
+      className="card card-hover flex flex-col items-center p-5 text-center"
+    >
       <IconBox Comp={Icon} size={22} className="h-11 w-11" />
       <p className="mt-3 text-xs font-semibold uppercase tracking-wide muted">
         {label}
@@ -46,24 +54,150 @@ function Feature({ to, Icon, title, desc, cta }) {
   );
 }
 
+function Skeleton({ className = "" }) {
+  return <div className={`animate-pulse rounded-xl bg-white/5 ${className}`} />;
+}
+
 export default function Home() {
-  const { iuran, kas, transaksi, usaha, pengumuman, agenda, lokasi } = useOutletContext();
-  const totalRumah = blok.reduce((s, b) => s + b.jumlah, 0);
+  const { iuran, kas, transaksi, usaha, pengumuman, agenda, lokasi } =
+    useOutletContext();
+
+  // ✅ State untuk data real-time dari database
+  const [dbStats, setDbStats] = useState({
+    totalWarga: 0,
+    dihuni: 0,
+    kontrak: 0,
+    kosong: 0,
+    kasBanjir: 0,
+    totalRumah: 0,
+    loading: true,
+  });
+
+  // ✅ Ambil data real-time dari Supabase
+  useEffect(() => {
+    if (!supabase) {
+      // Fallback ke data lokal jika Supabase tidak tersedia
+      const totalRumah = blok.reduce((s, b) => s + b.jumlah, 0);
+      const dihuni = dataWarga.filter((w) => w.ket === "Dihuni").length;
+      const kontrak = dataWarga.filter((w) => w.ket === "Dikontrakkan").length;
+      const kosong = dataWarga.filter((w) => w.ket === "Kosong").length;
+      const kasBanjir = banjirKontribusi.reduce(
+        (s, r) => s + BANJIR_BULAN.reduce((a, b) => a + Number(r[b] || 0), 0),
+        0,
+      );
+
+      setDbStats({
+        totalWarga: dihuni + kontrak + kosong,
+        dihuni,
+        kontrak,
+        kosong,
+        kasBanjir,
+        totalRumah,
+        loading: false,
+      });
+      return;
+    }
+
+    const loadStats = async () => {
+      try {
+        // Ambil data warga
+        const { data: warga } = await supabase
+          .from("data_warga")
+          .select("ket, blok");
+
+        // Ambil data kontribusi banjir
+        const { data: banjir } = await supabase
+          .from("banjir_kontribusi")
+          .select("*");
+
+        const totalRumah =
+          warga?.length || blok.reduce((s, b) => s + b.jumlah, 0);
+        const dihuni = warga?.filter((w) => w.ket === "Dihuni").length || 0;
+        const kontrak =
+          warga?.filter((w) => w.ket === "Dikontrakkan").length || 0;
+        const kosong = warga?.filter((w) => w.ket === "Kosong").length || 0;
+
+        // Hitung total kas banjir dari database
+        const kasBanjir =
+          banjir?.reduce((total, row) => {
+            return (
+              total +
+              BANJIR_BULAN.reduce((sum, bulan) => {
+                return sum + Number(row[bulan] || 0);
+              }, 0)
+            );
+          }, 0) || 0;
+
+        setDbStats({
+          totalWarga: dihuni + kontrak + kosong,
+          dihuni,
+          kontrak,
+          kosong,
+          kasBanjir,
+          totalRumah,
+          loading: false,
+        });
+      } catch (error) {
+        console.error("Gagal memuat statistik:", error);
+        // Fallback ke data lokal
+        const totalRumah = blok.reduce((s, b) => s + b.jumlah, 0);
+        setDbStats((prev) => ({
+          ...prev,
+          totalRumah,
+          loading: false,
+        }));
+      }
+    };
+
+    loadStats();
+
+    // ✅ Real-time subscription untuk update otomatis
+    const wargaChannel = supabase
+      .channel("warga-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "data_warga" },
+        () => loadStats(),
+      )
+      .subscribe();
+
+    const banjirChannel = supabase
+      .channel("banjir-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "banjir_kontribusi" },
+        () => loadStats(),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(wargaChannel);
+      supabase.removeChannel(banjirChannel);
+    };
+  }, []);
+
+  // ✅ Data dari database (fallback ke data lokal jika kosong)
+  const dataWarga = dbStats.loading ? [] : []; // Gunakan data dari dbStats
+  const totalRumah =
+    dbStats.totalRumah || blok.reduce((s, b) => s + b.jumlah, 0);
+  const dihuni = dbStats.dihuni;
+  const kontrak = dbStats.kontrak;
+  const kosong = dbStats.kosong;
+  const kasBanjir = dbStats.kasBanjir;
+
   const totalKas = computeKas(kas, transaksi).total;
   const iuranTotal = iuran.reduce((s, i) => s + Number(i.nominal || 0), 0);
 
-  const dihuni = dataWarga.filter((w) => w.ket === "Dihuni").length;
-  const kontrak = dataWarga.filter((w) => w.ket === "Dikontrakkan").length;
-  const kosong = dataWarga.filter((w) => w.ket === "Kosong").length;
-  const kasBanjir = banjirKontribusi.reduce(
-    (s, r) => s + BANJIR_BULAN.reduce((a, b) => a + Number(r[b] || 0), 0),
-    0,
-  );
   const donutData = [
     { label: "Dihuni", value: dihuni, color: "#f97316" },
     { label: "Dikontrakkan", value: kontrak, color: "#22c55e" },
     { label: "Kosong", value: kosong, color: "#3b82f6" },
   ];
+
+  const hunian = {
+    ditempati: dihuni,
+    dikontrakkan: kontrak,
+  };
 
   return (
     <div>
@@ -123,15 +257,79 @@ export default function Home() {
         </div>
       </section>
 
-      {/* DASHBOARD RINGKAS (ala griyamelati) */}
+      {/* DASHBOARD RINGKAS */}
       <section className="mx-auto max-w-6xl px-4 py-6">
         <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <DashCard to="/data-warga" Icon={Users} label="Warga" value={totalRumah} unit="Rumah" />
-          <DashCard to="/kas" Icon={Wallet} label="Saldo Kas" value={rp(totalKas)} />
-          <DashCard to="/banjir" Icon={Waves} label="Kas Banjir" value={rp(kasBanjir)} />
-          <DashCard to="/warga" Icon={CalendarDays} label="Agenda" value={agenda.length} unit="Agenda aktif" />
-          <DashCard to="/usaha" Icon={Store} label="Usaha" value={usaha.length} cta="Jelajahi" />
+          {dbStats.loading ? (
+            // Loading skeleton
+            <>
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="card flex flex-col items-center p-5">
+                  <Skeleton className="h-11 w-11 rounded-xl" />
+                  <Skeleton className="mt-3 h-3 w-16" />
+                  <Skeleton className="mt-2 h-8 w-24" />
+                  <Skeleton className="mt-1 h-3 w-12" />
+                  <Skeleton className="mt-3 h-8 w-20 rounded-full" />
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <DashCard
+                to="/data-warga"
+                Icon={Users}
+                label="Warga"
+                value={dbStats.totalWarga}
+                unit="KK"
+              />
+              <DashCard
+                to="/kas"
+                Icon={Wallet}
+                label="Saldo Kas"
+                value={rp(totalKas)}
+              />
+              <DashCard
+                to="/banjir"
+                Icon={Waves}
+                label="Dana Banjir"
+                value={rp(kasBanjir)}
+                unit={`${BANJIR_BULAN.length} bulan`}
+              />
+              <DashCard
+                to="/warga"
+                Icon={CalendarDays}
+                label="Agenda"
+                value={agenda.length}
+                unit="Agenda aktif"
+              />
+              <DashCard
+                to="/usaha"
+                Icon={Store}
+                label="Usaha"
+                value={usaha.length}
+                cta="Jelajahi"
+              />
+            </>
+          )}
         </div>
+
+        {/* Info Tambahan Real-time */}
+        {!dbStats.loading && (
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="rounded-xl bg-emerald-500/10 px-4 py-3 text-center">
+              <p className="text-2xl font-bold text-emerald-400">{dihuni}</p>
+              <p className="text-xs text-emerald-300/70">Dihuni</p>
+            </div>
+            <div className="rounded-xl bg-blue-500/10 px-4 py-3 text-center">
+              <p className="text-2xl font-bold text-blue-400">{kontrak}</p>
+              <p className="text-xs text-blue-300/70">Dikontrakkan</p>
+            </div>
+            <div className="rounded-xl bg-zinc-500/10 px-4 py-3 text-center">
+              <p className="text-2xl font-bold text-zinc-400">{kosong}</p>
+              <p className="text-xs text-zinc-300/70">Kosong</p>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* VOTING + STATISTIK */}
@@ -139,8 +337,18 @@ export default function Home() {
         <Voting />
         <div className="card p-6">
           <h3 className="text-center text-lg font-bold">Statistik Hunian</h3>
+          <p className="text-center text-xs muted mt-1">
+            Update real-time dari database
+          </p>
           <div className="mt-4 grid place-items-center">
-            <Donut data={donutData} />
+            {dbStats.loading ? (
+              <Skeleton className="h-48 w-48 rounded-full" />
+            ) : (
+              <Donut data={donutData} />
+            )}
+          </div>
+          <div className="mt-4 flex justify-center gap-4 text-xs muted">
+            <span>Total: {dihuni + kontrak + kosong} KK</span>
           </div>
         </div>
       </section>

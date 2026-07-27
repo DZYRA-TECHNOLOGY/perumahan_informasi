@@ -3,8 +3,7 @@ import { supabase } from "./supabase.js";
 import * as local from "../data/siteplan.js";
 
 // Ambil tabel. Fallback ke data contoh HANYA jika Supabase mati atau tabel belum
-// dibuat (error). Kalau tabel ada tapi kosong → kembalikan kosong (data asli),
-// supaya data yang sengaja dihapus tidak "dihidupkan lagi" oleh data dummy.
+// dibuat (error). Kalau tabel ada tapi kosong → kembalikan kosong (data asli).
 async function fetchTable(name, fallback, order = "id") {
   if (!supabase) return fallback;
   const { data, error } = await supabase
@@ -15,19 +14,44 @@ async function fetchTable(name, fallback, order = "id") {
   return data || [];
 }
 
-// State awal: kalau Supabase aktif, mulai kosong (biar tak ada kedip data dummy);
-// kalau tidak, pakai data contoh lokal.
 const emptyState = {
-  iuran: [], kas: [], transaksi: [], agenda: [], usaha: [], pengumuman: [],
-  dataWarga: [], keuangan: [], iuranAir: [], banjirKontribusi: [],
-  banjirPengeluaran: [], struktur: [], lokasi: local.lokasi, source: "supabase",
+  iuran: [],
+  kas: [],
+  transaksi: [],
+  agenda: [],
+  usaha: [],
+  pengumuman: [],
+  dataWarga: [],
+  keuangan: [],
+  iuranAir: [],
+  banjirKontribusi: [],
+  banjirPengeluaran: [],
+  struktur: [],
+  lokasi: local.lokasi,
+  kasMaster: [],
+  kasTagihan: [],
+  kasPembayaran: [],
+  source: "supabase",
 };
+
 const localState = {
-  iuran: local.iuran, kas: local.kas, transaksi: local.transaksi,
-  agenda: local.agenda, usaha: local.usahaWarga, pengumuman: local.pengumuman,
-  dataWarga: local.dataWarga, keuangan: local.keuanganRows, iuranAir: local.iuranAir,
-  banjirKontribusi: local.banjirKontribusi, banjirPengeluaran: local.banjirPengeluaran,
-  struktur: local.struktur, lokasi: local.lokasi, source: "lokal",
+  iuran: local.iuran,
+  kas: local.kas,
+  transaksi: local.transaksi,
+  agenda: local.agenda,
+  usaha: local.usahaWarga,
+  pengumuman: local.pengumuman,
+  dataWarga: local.dataWarga,
+  keuangan: local.keuanganRows,
+  iuranAir: local.iuranAir,
+  banjirKontribusi: local.banjirKontribusi,
+  banjirPengeluaran: local.banjirPengeluaran,
+  struktur: local.struktur,
+  lokasi: local.lokasi,
+  kasMaster: [],
+  kasTagihan: [],
+  kasPembayaran: [],
+  source: "lokal",
 };
 
 export function useData() {
@@ -40,9 +64,22 @@ export function useData() {
     if (!supabase) return;
     (async () => {
       const [
-        iuran, kas, transaksi, agenda, usaha, pengumuman,
-        dataWarga, keuangan, iuranAir, banjirKontribusi, banjirPengeluaran,
-        struktur, pengaturan,
+        iuran,
+        kas,
+        transaksi,
+        agenda,
+        usaha,
+        pengumuman,
+        dataWarga,
+        keuangan,
+        iuranAir,
+        banjirKontribusi,
+        banjirPengeluaran,
+        struktur,
+        pengaturan,
+        kasMaster,
+        kasTagihan,
+        kasPembayaran,
       ] = await Promise.all([
         fetchTable("iuran", local.iuran),
         fetchTable("kas", local.kas),
@@ -57,12 +94,29 @@ export function useData() {
         fetchTable("banjir_pengeluaran", local.banjirPengeluaran),
         fetchTable("struktur", local.struktur, "urutan"),
         fetchTable("pengaturan", [local.lokasi]),
+        fetchTable("kas_master", []),
+        fetchTable("kas_tagihan", []),
+        fetchTable("kas_pembayaran", []),
       ]);
       if (alive)
         setState({
-          iuran, kas, transaksi, agenda, usaha, pengumuman,
-          dataWarga, keuangan, iuranAir, banjirKontribusi, banjirPengeluaran,
-          struktur, lokasi: pengaturan[0] || local.lokasi, source: "supabase",
+          iuran,
+          kas,
+          transaksi,
+          agenda,
+          usaha,
+          pengumuman,
+          dataWarga,
+          keuangan,
+          iuranAir,
+          banjirKontribusi,
+          banjirPengeluaran,
+          struktur,
+          lokasi: pengaturan[0] || local.lokasi,
+          kasMaster,
+          kasTagihan,
+          kasPembayaran,
+          source: "supabase",
         });
     })();
     return () => {

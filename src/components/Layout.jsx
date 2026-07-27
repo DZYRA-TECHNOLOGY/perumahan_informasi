@@ -4,7 +4,7 @@ import { Menu, X, LogIn, ChevronDown } from "lucide-react";
 import { useData } from "../lib/useData.js";
 import { profil, statistik, kontak } from "../data/siteplan.js";
 
-const LOGO = "/Gemini_Generated_Image_hb3ouyhb3ouyhb3o-removebg-preview.png";
+const LOGO = "/Gemini_Generated_Image_plrfr5plrfr5plrf-removebg-preview.png";
 
 const MENU = [
   { label: "Beranda", to: "/", end: true },
@@ -166,7 +166,11 @@ export default function Layout() {
               {open ? <X size={20} /> : <Menu size={20} />}
             </button>
             <Link to="/" className="justify-self-center">
-              <img src={LOGO} alt="Sigerland" className="h-12 w-auto object-contain" />
+              <img
+                src={LOGO}
+                alt="Sigerland"
+                className="h-12 w-auto object-contain"
+              />
             </Link>
             <Link
               to="/admin"
@@ -223,7 +227,10 @@ export default function Layout() {
                   </NavLink>
                 ),
               )}
-              <Link to="/admin" className="btn-orange mt-3 w-full justify-center">
+              <Link
+                to="/admin"
+                className="btn-orange mt-3 w-full justify-center"
+              >
                 <LogIn size={17} /> Login Pengurus
               </Link>
             </nav>

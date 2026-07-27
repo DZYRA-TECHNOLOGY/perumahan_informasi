@@ -251,5 +251,103 @@ create policy "foto auth upload" on storage.objects for insert to authenticated 
 create policy "foto auth update" on storage.objects for update to authenticated using (bucket_id = 'foto');
 create policy "foto auth delete" on storage.objects for delete to authenticated using (bucket_id = 'foto');
 
+-- ============================================================
+--  KAS BULANAN: tagihan + pembayaran (verifikasi pengurus)
+-- ============================================================
+-- Katalog jenis iuran (menu iuran): Umum, Keamanan, Kebersihan, Air, dst.
+create table if not exists kas_master (
+  id bigint generated always as identity primary key,
+  nama text, keterangan text
+);
+alter table kas_master add column if not exists nominal int not null default 0;
+alter table kas_master add column if not exists aktif boolean not null default true;
+
+create table if not exists kas_tagihan (
+  id bigint generated always as identity primary key,
+  blok text, nama text, periode text,
+  jenis text,                                    -- jenis iuran (dari kas_master)
+  nominal int not null default 0,
+  status text not null default 'Belum Bayar',   -- Belum Bayar | Menunggu | Lunas
+  jatuh_tempo date
+);
+alter table kas_tagihan add column if not exists jenis text;
+
+-- Seed katalog iuran (termasuk Air) bila masih kosong.
+insert into kas_master (nama, nominal, aktif)
+select * from (values
+  ('Iuran Umum', 25000, true),
+  ('Iuran Keamanan', 30000, true),
+  ('Iuran Kebersihan', 15000, true),
+  ('Iuran Air', 100000, true)
+) v(nama,nominal,aktif)
+where not exists (select 1 from kas_master);
+create table if not exists kas_pembayaran (
+  id bigint generated always as identity primary key,
+  created_at timestamptz default now(),
+  tagihan_id bigint references kas_tagihan(id) on delete set null,
+  blok text, nama text, periode text,
+  nominal int not null default 0,
+  metode text default 'Transfer',
+  bukti text,
+  status text not null default 'Menunggu',       -- Menunggu | Disetujui | Ditolak
+  catatan text,
+  diverifikasi_oleh text, diverifikasi_at timestamptz
+);
+
+-- Seed contoh tagihan (hanya bila kosong).
+insert into kas_tagihan (blok, nama, periode, nominal, status)
+select * from (values
+  ('A1','Budi Santoso','Juli 2026',100000,'Belum Bayar'),
+  ('A2','Sari Dewi','Juli 2026',100000,'Belum Bayar'),
+  ('B1','Lestari Wulandari','Juli 2026',100000,'Lunas'),
+  ('B5','Chandra','Juli 2026',100000,'Belum Bayar')
+) v(blok,nama,periode,nominal,status)
+where not exists (select 1 from kas_tagihan);
+
+-- RLS: publik boleh BACA; warga boleh KIRIM pembayaran; pengurus verifikasi.
+alter table kas_master enable row level security;
+alter table kas_tagihan enable row level security;
+alter table kas_pembayaran enable row level security;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['kas_master','kas_tagihan'] loop
+    execute format('drop policy if exists "public read" on %I', t);
+    execute format('drop policy if exists "auth write" on %I', t);
+    execute format('drop policy if exists "auth update" on %I', t);
+    execute format('drop policy if exists "auth delete" on %I', t);
+    execute format('create policy "public read" on %I for select using (true)', t);
+    execute format('create policy "auth write"  on %I for insert to authenticated with check (true)', t);
+    execute format('create policy "auth update" on %I for update to authenticated using (true) with check (true)', t);
+    execute format('create policy "auth delete" on %I for delete to authenticated using (true)', t);
+  end loop;
+end $$;
+
+-- kas_pembayaran: publik boleh baca & KIRIM (warga tanpa login); pengurus verifikasi/hapus.
+drop policy if exists "pembayaran public read"   on kas_pembayaran;
+drop policy if exists "pembayaran public insert" on kas_pembayaran;
+drop policy if exists "pembayaran auth update"   on kas_pembayaran;
+drop policy if exists "pembayaran auth delete"   on kas_pembayaran;
+create policy "pembayaran public read"   on kas_pembayaran for select using (true);
+create policy "pembayaran public insert" on kas_pembayaran for insert with check (true);
+create policy "pembayaran auth update"   on kas_pembayaran for update to authenticated using (true) with check (true);
+create policy "pembayaran auth delete"   on kas_pembayaran for delete to authenticated using (true);
+
+-- Bucket 'bukti' untuk bukti pembayaran warga (upload publik, dibatasi gambar & 5 MB).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('bukti', 'bukti', true, 5242880, array['image/png','image/jpeg','image/webp','image/gif'])
+on conflict (id) do update set
+  public = true,
+  file_size_limit = 5242880,
+  allowed_mime_types = array['image/png','image/jpeg','image/webp','image/gif'];
+
+drop policy if exists "bukti public read"   on storage.objects;
+drop policy if exists "bukti public upload" on storage.objects;
+drop policy if exists "bukti auth manage"   on storage.objects;
+create policy "bukti public read"   on storage.objects for select using (bucket_id = 'bukti');
+create policy "bukti public upload" on storage.objects for insert with check (bucket_id = 'bukti');
+create policy "bukti auth manage"   on storage.objects for delete to authenticated using (bucket_id = 'bukti');
+
 -- Paksa PostgREST memuat ulang skema (hilangkan error "schema cache").
 notify pgrst, 'reload schema';
