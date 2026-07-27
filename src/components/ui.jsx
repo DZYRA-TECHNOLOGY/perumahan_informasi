@@ -82,6 +82,14 @@ export function PageHero({ kicker, title, desc, children }) {
 
 export function Container({ children, className = "" }) {
   return (
+    <div className={`mx-auto max-w-6xl px-4 py-12 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+export function ContainerAdmin({ children, className = "" }) {
+  return (
     <div className={`mx-auto w-full px-4 py-12 ${className}`}>{children}</div>
   );
 }
