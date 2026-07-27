@@ -22,7 +22,7 @@ const MENU = [
       { to: "/kas", label: "Saldo Kas & Transaksi" },
       { to: "/keuangan", label: "Rekap Laporan Keuangan" },
       { to: "/iuran", label: "Iuran Warga" },
-      { to: "/iuran-air", label: "Iuran Air" },
+      // { to: "/iuran-air", label: "Iuran Air" },
       { to: "/banjir", label: "Dana Banjir" },
     ],
   },

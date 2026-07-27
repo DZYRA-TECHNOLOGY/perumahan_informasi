@@ -8,6 +8,7 @@ import { computeKas } from "../lib/finance.js";
 import * as local from "../data/siteplan.js";
 import { Printer, Store } from "lucide-react";
 import KasPembayaranForm from "./KasPembayaranForm.jsx";
+import { Link } from "react-router-dom";
 const rp = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 const fmtTgl = (t) => {
   const d = new Date(t);
@@ -706,7 +707,12 @@ const PANELS = {
     fallback: [],
     fields: [
       { name: "nama", label: "Nama Iuran (mis. Iuran Air)" },
-      { name: "nominal", label: "Nominal default", type: "number", money: true },
+      {
+        name: "nominal",
+        label: "Nominal default",
+        type: "number",
+        money: true,
+      },
       { name: "aktif", label: "Aktif", options: ["true", "false"] },
     ],
   },
@@ -839,7 +845,8 @@ export default function Admin({ onChanged }) {
     );
   }
   if (!ready) return <p className="text-center muted">Memuat…</p>;
-  if (showLogin && !session) return <Login />;
+  // if (showLogin && !session) return <Login />;
+  if (!session) return <Login />;
 
   const preview = !session;
   const activeMenu = MENU.find((m) => m.key === tab);
@@ -957,6 +964,12 @@ export default function Admin({ onChanged }) {
         <section className="min-w-0 pb-10">
           {/* Breadcrumb & Title */}
           <div className="mb-4 sm:mb-5">
+            <div className="mb-6 flex items-center justify-between">
+              <h1 className="text-2xl font-extrabold">Panel Pengurus</h1>
+              <Link to="/" className="text-sm font-semibold text-orange-400">
+                ← Beranda
+              </Link>
+            </div>
             <div className="flex items-center gap-1.5 text-xs muted">
               <Icon name="Home" size={13} />
               <span>Panel</span>

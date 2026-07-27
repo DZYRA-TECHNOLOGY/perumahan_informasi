@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { uploadImage } from "../lib/upload.js";
 import { ImageIcon } from "lucide-react";
@@ -70,6 +70,10 @@ export default function CrudTable({
   fields,
   fallback = [],
   onChanged,
+  searchKeys,
+  columns,
+  pageSize = 25,
+
   preview = false,
 }) {
   const [rows, setRows] = useState([]);
@@ -78,6 +82,8 @@ export default function CrudTable({
   const [form, setForm] = useState({});
   const [msg, setMsg] = useState("");
   const [demo, setDemo] = useState(false);
+  const [page, setPage] = useState(1);
+  const [q, setQ] = useState("");
 
   const scrollRef = useRef(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -214,6 +220,65 @@ export default function CrudTable({
     return String(v ?? "");
   };
 
+  // const keys = searchKeys || columns.map((c) => c.key);
+  const keys = searchKeys ?? fields.map((f) => f.name);
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+
+    if (!s) return rows;
+
+    return rows.filter((r) =>
+      keys.some((k) =>
+        String(r[k] ?? "")
+          .toLowerCase()
+          .includes(s),
+      ),
+    );
+  }, [q, rows, keys]);
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const cur = Math.min(page, pages);
+  const slice = filtered.slice((cur - 1) * pageSize, cur * pageSize);
+  useEffect(() => {
+    setPage(1);
+  }, [q]);
+
+  useEffect(() => {
+    if (page > pages) {
+      setPage(pages);
+    }
+  }, [pages]);
+
+  const getPageNumbers = () => {
+    const total = pages;
+    const current = cur;
+    const maxVisible = 5;
+
+    if (total <= maxVisible) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+
+    const half = Math.floor(maxVisible / 2);
+    let start = Math.max(1, current - half);
+    let end = Math.min(total, start + maxVisible - 1);
+
+    if (end - start < maxVisible - 1) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+
+    const pages_array = [];
+    if (start > 1) {
+      pages_array.push(1);
+      if (start > 2) pages_array.push("...");
+    }
+    for (let i = start; i <= end; i++) {
+      pages_array.push(i);
+    }
+    if (end < total) {
+      if (end < total - 1) pages_array.push("...");
+      pages_array.push(total);
+    }
+    return pages_array;
+  };
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -221,9 +286,14 @@ export default function CrudTable({
           <h3 className="text-lg font-bold">{title}</h3>
           {demo && (
             <p className="text-xs text-amber-500/90">
-              {preview
-                ? "Menampilkan data contoh (mode preview) — klik Masuk untuk mengelola data asli."
-                : (<>Menampilkan data demo — buat tabel <code>{table}</code> di Supabase untuk mengelola data asli.</>)}
+              {preview ? (
+                "Menampilkan data contoh (mode preview) — klik Masuk untuk mengelola data asli."
+              ) : (
+                <>
+                  Menampilkan data demo — buat tabel <code>{table}</code> di
+                  Supabase untuk mengelola data asli.
+                </>
+              )}
             </p>
           )}
         </div>
@@ -231,7 +301,6 @@ export default function CrudTable({
           + Tambah
         </button>
       </div>
-
       <div className="relative card">
         {/* PENTING: overflow-x-auto di wrapper scroll, BUKAN overflow-hidden di card —
             overflow-hidden sebelumnya membuat kolom yang meluber ter-clip, bukan bisa digeser. */}
@@ -270,7 +339,7 @@ export default function CrudTable({
                   </td>
                 </tr>
               )}
-              {rows.map((row, i) => (
+              {slice.map((row, i) => (
                 <tr key={row.id ?? i} className="hover:bg-white/[0.03]">
                   {fields.map((f) => (
                     <td key={f.name} className="whitespace-nowrap px-4 py-3">
@@ -302,13 +371,11 @@ export default function CrudTable({
           <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-zinc-950/70 to-transparent sm:hidden rounded-r-2xl" />
         )}
       </div>
-
       {canScrollRight && (
         <p className="mt-1.5 text-[11px] muted sm:hidden">
           ← Geser tabel untuk lihat kolom lainnya →
         </p>
       )}
-
       {editing && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
@@ -380,7 +447,67 @@ export default function CrudTable({
             </form>
           </div>
         </div>
-      )}
+      )}{" "}
+      {/* Pagination */}
+      <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <span className="text-sm text-zinc-400 whitespace-nowrap">
+          Menampilkan {(cur - 1) * pageSize + 1}–
+          {Math.min(cur * pageSize, filtered.length)} dari {filtered.length}{" "}
+          data
+        </span>
+
+        <div className="flex items-center gap-1">
+          <button
+            className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-sm font-medium text-zinc-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={cur === 1}
+            onClick={() => setPage(1)}
+          >
+            «
+          </button>
+          <button
+            className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-sm font-medium text-zinc-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={cur === 1}
+            onClick={() => setPage(cur - 1)}
+          >
+            ‹
+          </button>
+
+          {getPageNumbers().map((p, i) =>
+            p === "..." ? (
+              <span key={`ellipsis-${i}`} className="px-1 text-zinc-500">
+                …
+              </span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`h-9 min-w-9 rounded-lg px-2 text-sm font-medium transition ${
+                  cur === p
+                    ? "bg-orange-500 text-white"
+                    : "border border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {p}
+              </button>
+            ),
+          )}
+
+          <button
+            className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-sm font-medium text-zinc-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={cur === pages}
+            onClick={() => setPage(cur + 1)}
+          >
+            ›
+          </button>
+          <button
+            className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-sm font-medium text-zinc-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={cur === pages}
+            onClick={() => setPage(pages)}
+          >
+            »
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
