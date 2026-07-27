@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { uploadImage } from "../lib/upload.js";
-import { ImageIcon } from "lucide-react";
-
+import { ImageIcon, Pencil, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
 const rp = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
 // Input upload gambar → menyimpan URL publik ke form[name].
@@ -172,35 +172,89 @@ export default function CrudTable({
         .update(payload)
         .eq("id", editing.id));
     if (error) {
-      setMsg("Gagal: " + error.message);
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Menyimpan",
+        text: error.message,
+        confirmButtonColor: "#f97316",
+        background: "#17171b",
+        color: "#fff",
+      });
       return;
     }
     close();
-    load();
+    await load();
     onChanged?.();
+
+    Swal.fire({
+      icon: "success",
+      title: "Berhasil",
+      text:
+        editing === "new"
+          ? "Data berhasil ditambahkan."
+          : "Data berhasil diperbarui.",
+      timer: 1800,
+      showConfirmButton: false,
+      background: "#17171b",
+      color: "#fff",
+    });
   };
 
   const remove = async (row) => {
     if (preview) {
-      alert("Mode preview — klik Masuk untuk mengelola data asli.");
+      Swal.fire({
+        icon: "info",
+        title: "Mode Preview",
+        text: "Klik Masuk untuk mengelola data asli.",
+        confirmButtonColor: "#f97316",
+        background: "#17171b",
+        color: "#fff",
+      });
       return;
     }
-    if (!window.confirm("Hapus data ini?")) return;
-    if (!supabase) {
-      alert("Mode demo: hubungkan Supabase untuk menghapus.");
-      return;
-    }
+
+    const result = await Swal.fire({
+      title: "Hapus data?",
+      text: "Data yang dihapus tidak dapat dikembalikan.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Hapus",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#3f3f46",
+      background: "#17171b",
+      color: "#fff",
+      reverseButtons: true,
+    });
+
+    if (!result.isConfirmed) return;
+
     const { error } = await supabase.from(table).delete().eq("id", row.id);
+
     if (error) {
-      alert(
-        "Gagal menghapus: " +
-          error.message +
-          "\n\nBiasanya karena policy DELETE belum ada. Jalankan ulang supabase/setup.sql.",
-      );
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Menghapus",
+        text: error.message,
+        confirmButtonColor: "#f97316",
+        background: "#17171b",
+        color: "#fff",
+      });
       return;
     }
-    load();
+
+    await load();
     onChanged?.();
+
+    Swal.fire({
+      icon: "success",
+      title: "Berhasil",
+      text: "Data berhasil dihapus.",
+      timer: 1800,
+      showConfirmButton: false,
+      background: "#17171b",
+      color: "#fff",
+    });
   };
 
   const cell = (row, f) => {
@@ -347,18 +401,22 @@ export default function CrudTable({
                     </td>
                   ))}
                   <td className="whitespace-nowrap px-4 py-3 text-right">
-                    <button
-                      onClick={() => openEdit(row)}
-                      className="mr-2 text-sm font-medium text-orange-400 hover:underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => remove(row)}
-                      className="text-sm font-medium text-rose-400 hover:underline"
-                    >
-                      Hapus
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => openEdit(row)}
+                        className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium text-orange-400 transition hover:bg-orange-400/10 hover:text-orange-300"
+                      >
+                        <Pencil size={14} />
+                        <span className="hidden sm:inline">Edit</span>
+                      </button>
+                      <button
+                        onClick={() => remove(row)}
+                        className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium text-rose-400 transition hover:bg-rose-400/10 hover:text-rose-300"
+                      >
+                        <Trash2 size={14} />
+                        <span className="hidden sm:inline">Hapus</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
