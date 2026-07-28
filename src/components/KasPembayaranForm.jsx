@@ -59,8 +59,10 @@ export default function KasPembayaranForm({ onChanged, verifierEmail = "" }) {
       supabase
         .from("kas_tagihan")
         .select("*")
-        .order("id", { ascending: false })
-        .limit(500),
+        .neq("status", "Lunas") // 👈 hanya ambil yang belum lunas
+
+        .order("id", { ascending: false }),
+      // .limit(10000000),
       // PENTING: dibatasi 200 baris terbaru — tanpa ini, tabel akan ditarik PENUH
       // setiap kali form dibuka dan makin lambat seiring waktu karena data historis menumpuk.
       // Kalau butuh lihat histori lama, sebaiknya buat halaman rekap terpisah dengan
@@ -68,8 +70,8 @@ export default function KasPembayaranForm({ onChanged, verifierEmail = "" }) {
       supabase
         .from("kas_pembayaran")
         .select("*")
-        .order("id", { ascending: false })
-        .limit(200),
+        .order("id", { ascending: false }),
+      // .limit(200),
     ]);
     if (tRes.error) setErr(tRes.error.message);
     else setTagihanList(tRes.data || []);

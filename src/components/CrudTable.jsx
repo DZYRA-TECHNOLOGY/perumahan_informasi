@@ -333,6 +333,7 @@ export default function CrudTable({
     }
     return pages_array;
   };
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
