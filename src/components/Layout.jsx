@@ -255,7 +255,7 @@ export default function Layout() {
               <p className="mt-1 text-sm muted">{kontak.alamat}</p>
               <p className="mt-1 text-sm muted">Ketua RT: {kontak.ketuaRT}</p>
             </div>
-            <div className="flex gap-8">
+            {/* <div className="flex gap-8">
               {[
                 ["Pengunjung", statistik.pengunjung],
                 ["Warga aktif", statistik.wargaAktif],
@@ -266,7 +266,7 @@ export default function Layout() {
                   <p className="text-xs muted">{l}</p>
                 </div>
               ))}
-            </div>
+            </div> */}
           </div>
           <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-white/10 pt-6 text-center text-xs muted sm:flex-row">
             {/* <p>
