@@ -278,8 +278,8 @@ export default function Home() {
               <DashCard
                 to="/data-warga"
                 Icon={Users}
-                label="Warga"
-                value={dbStats.totalWarga}
+                label="Rumah dihuni"
+                value={dbStats.dihuni}
                 unit="KK"
               />
               <DashCard
