@@ -270,7 +270,7 @@ export default function Layout() {
           </div>
           <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-white/10 pt-6 text-center text-xs muted sm:flex-row">
             <p>
-              © 2026 {profil.nama} — {profil.tagline}.
+              © 2026 {profil.nama} — {profil.tagline} - {profil.author}.
             </p>
             <p>
               Sumber data:{" "}

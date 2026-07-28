@@ -8,6 +8,7 @@ export const profil = {
   kecamatan: "Kecamatan Jati Agung",
   kabupaten: "Kabupaten Lampung Selatan",
   tagline: "Bersama, Rukun, & Transparan",
+  author: "Powered by DZYRA.CO.ID | All right reserved",
 };
 
 // Status kavling sesuai legenda siteplan
@@ -57,12 +58,54 @@ export const kas = [
 
 // Transaksi = SATU sumber kebenaran keuangan. Ditandai kas & periode.
 export const transaksi = [
-  { tgl: "2026-07-20", periode: "Periode 4", kas: "Kas Keamanan", tipe: "masuk", nominal: 4_440_000, ket: "Iuran keamanan 148 rumah" },
-  { tgl: "2026-07-18", periode: "Periode 4", kas: "Kas Keamanan", tipe: "keluar", nominal: 3_600_000, ket: "Gaji Satpam (Jul)" },
-  { tgl: "2026-07-15", periode: "Periode 4", kas: "Kas Kebersihan", tipe: "masuk", nominal: 3_700_000, ket: "Iuran sampah 148 rumah" },
-  { tgl: "2026-07-12", periode: "Periode 4", kas: "Kas Kebersihan", tipe: "keluar", nominal: 2_100_000, ket: "Angkut sampah TPS" },
-  { tgl: "2026-07-05", periode: "Periode 3", kas: "Kas Umum", tipe: "keluar", nominal: 450_000, ket: "Beli alat kebersihan taman" },
-  { tgl: "2026-07-01", periode: "Periode 3", kas: "Kas Umum", tipe: "masuk", nominal: 885_000, ket: "Sisa saldo periode sebelumnya" },
+  {
+    tgl: "2026-07-20",
+    periode: "Periode 4",
+    kas: "Kas Keamanan",
+    tipe: "masuk",
+    nominal: 4_440_000,
+    ket: "Iuran keamanan 148 rumah",
+  },
+  {
+    tgl: "2026-07-18",
+    periode: "Periode 4",
+    kas: "Kas Keamanan",
+    tipe: "keluar",
+    nominal: 3_600_000,
+    ket: "Gaji Satpam (Jul)",
+  },
+  {
+    tgl: "2026-07-15",
+    periode: "Periode 4",
+    kas: "Kas Kebersihan",
+    tipe: "masuk",
+    nominal: 3_700_000,
+    ket: "Iuran sampah 148 rumah",
+  },
+  {
+    tgl: "2026-07-12",
+    periode: "Periode 4",
+    kas: "Kas Kebersihan",
+    tipe: "keluar",
+    nominal: 2_100_000,
+    ket: "Angkut sampah TPS",
+  },
+  {
+    tgl: "2026-07-05",
+    periode: "Periode 3",
+    kas: "Kas Umum",
+    tipe: "keluar",
+    nominal: 450_000,
+    ket: "Beli alat kebersihan taman",
+  },
+  {
+    tgl: "2026-07-01",
+    periode: "Periode 3",
+    kas: "Kas Umum",
+    tipe: "masuk",
+    nominal: 885_000,
+    ket: "Sisa saldo periode sebelumnya",
+  },
 ];
 
 // Jadwal kebersihan & agenda (contoh)
@@ -508,7 +551,11 @@ export const keuanganRows = keuanganPeriode.flatMap((p) =>
 
 // IDE BARU: kontak darurat.
 export const kontakDarurat = [
-  { label: "Pos Satpam / Keamanan", nomor: "0812-0000-1111", icon: "ShieldCheck" },
+  {
+    label: "Pos Satpam / Keamanan",
+    nomor: "0812-0000-1111",
+    icon: "ShieldCheck",
+  },
   { label: "Ketua RT", nomor: "0812-0000-0000", icon: "UserCog" },
   { label: "Ambulans / Puskesmas", nomor: "119", icon: "Ambulance" },
   { label: "Pemadam Kebakaran", nomor: "113", icon: "Flame" },
