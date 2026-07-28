@@ -9,6 +9,7 @@ export const profil = {
   kabupaten: "Kabupaten Lampung Selatan",
   tagline: "Bersama, Rukun, & Transparan",
   author: "Powered by DZYRA.CO.ID | All right reserved",
+  authorUrl: "https://www.dzyra.co.id", // <- isi dengan URL tujuan
 };
 
 // Status kavling sesuai legenda siteplan

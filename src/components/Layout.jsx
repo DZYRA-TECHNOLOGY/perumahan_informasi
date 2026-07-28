@@ -269,15 +269,27 @@ export default function Layout() {
             </div>
           </div>
           <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-white/10 pt-6 text-center text-xs muted sm:flex-row">
-            <p>
+            {/* <p>
               © 2026 {profil.nama} — {profil.tagline} - {profil.author}.
+            </p> */}
+            <p className="flex items-center gap-2">
+              <span>© 2026 {profil.nama}</span>
+              <span className="hidden text-zinc-700 sm:inline">·</span>
+              <span className="text-zinc-400">{profil.tagline}</span>
+              <span className="hidden text-zinc-700 sm:inline">·</span>
+              <a
+                href={profil.authorUrl || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-orange-400/80 transition hover:text-orange-400 hover:underline"
+              >
+                {profil.author}
+              </a>
             </p>
             <p>
               Sumber data:{" "}
-              {data.source === "supabase"
-                ? "Supabase (live)"
-                : "data lokal (demo)"}{" "}
-              · Update {statistik.updateTerakhir}
+              {data.source === "supabase" ? " (live)" : "data lokal (demo)"} ·
+              Update {statistik.updateTerakhir}
             </p>
           </div>
         </div>
