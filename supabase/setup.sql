@@ -261,6 +261,7 @@ create table if not exists kas_master (
 );
 alter table kas_master add column if not exists nominal int not null default 0;
 alter table kas_master add column if not exists aktif boolean not null default true;
+alter table kas_master add column if not exists wajib boolean not null default true;  -- false = sumbangan sukarela
 
 create table if not exists kas_tagihan (
   id bigint generated always as identity primary key,
@@ -272,15 +273,41 @@ create table if not exists kas_tagihan (
 );
 alter table kas_tagihan add column if not exists jenis text;
 
--- Seed katalog iuran (termasuk Air) bila masih kosong.
-insert into kas_master (nama, nominal, aktif)
+-- Seed katalog iuran (termasuk Air + contoh sumbangan sukarela) bila masih kosong.
+insert into kas_master (nama, nominal, aktif, wajib)
 select * from (values
-  ('Iuran Umum', 25000, true),
-  ('Iuran Keamanan', 30000, true),
-  ('Iuran Kebersihan', 15000, true),
-  ('Iuran Air', 100000, true)
-) v(nama,nominal,aktif)
+  ('Iuran Umum', 25000, true, true),
+  ('Iuran Keamanan', 30000, true, true),
+  ('Iuran Kebersihan', 15000, true, true),
+  ('Iuran Air', 100000, true, true),
+  ('Sumbangan HUT RI', 50000, true, false)
+) v(nama,nominal,aktif,wajib)
 where not exists (select 1 from kas_master);
+
+-- jenis pada pembayaran → untuk memetakan ke kas masing-masing (Kas Keamanan, dst).
+alter table kas_pembayaran add column if not exists jenis text;
+
+-- Jadwal kebersihan & sampah (CRUD).
+create table if not exists jadwal_sampah (
+  id bigint generated always as identity primary key,
+  hari text, wilayah text, keterangan text
+);
+insert into jadwal_sampah (hari, wilayah, keterangan)
+select * from (values
+  ('Senin & Kamis','Blok A, B',''),
+  ('Selasa & Jumat','Blok C, D',''),
+  ('Rabu & Sabtu','Blok E, F','')
+) v(hari,wilayah,keterangan)
+where not exists (select 1 from jadwal_sampah);
+alter table jadwal_sampah enable row level security;
+drop policy if exists "public read" on jadwal_sampah;
+drop policy if exists "auth write" on jadwal_sampah;
+drop policy if exists "auth update" on jadwal_sampah;
+drop policy if exists "auth delete" on jadwal_sampah;
+create policy "public read" on jadwal_sampah for select using (true);
+create policy "auth write"  on jadwal_sampah for insert to authenticated with check (true);
+create policy "auth update" on jadwal_sampah for update to authenticated using (true) with check (true);
+create policy "auth delete" on jadwal_sampah for delete to authenticated using (true);
 create table if not exists kas_pembayaran (
   id bigint generated always as identity primary key,
   created_at timestamptz default now(),

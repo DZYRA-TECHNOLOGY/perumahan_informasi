@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { uploadImage } from "../lib/upload.js";
-import { ImageIcon, Pencil, Trash2 } from "lucide-react";
+import { ImageIcon, Pencil, Trash2, Download, Upload, FileSpreadsheet } from "lucide-react";
 import Swal from "sweetalert2";
+import * as XLSX from "xlsx";
 const rp = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
 // Input upload gambar → menyimpan URL publik ke form[name].
@@ -84,6 +85,7 @@ export default function CrudTable({
   const [demo, setDemo] = useState(false);
   const [page, setPage] = useState(1);
   const [q, setQ] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const scrollRef = useRef(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -118,7 +120,7 @@ export default function CrudTable({
     const { data, error } = await supabase
       .from(table)
       .select("*")
-      .order("id", { ascending: false });
+      .order("id", { ascending: true }); // urut naik: data pertama (A) di atas, baru di bawah
     if (error) {
       setRows(fallback);
       setDemo(true);
@@ -257,6 +259,115 @@ export default function CrudTable({
     });
   };
 
+  const removeMany = async () => {
+    if (preview) {
+      Swal.fire({ icon: "info", title: "Mode Preview", text: "Klik Masuk untuk mengelola data asli.", confirmButtonColor: "#f97316", background: "#17171b", color: "#fff" });
+      return;
+    }
+    if (selectedIds.length === 0) return;
+    const res = await Swal.fire({
+      title: `Hapus ${selectedIds.length} data?`,
+      text: "Data yang dihapus tidak dapat dikembalikan.",
+      icon: "warning", showCancelButton: true, confirmButtonText: "Ya, Hapus",
+      cancelButtonText: "Batal", confirmButtonColor: "#ef4444", cancelButtonColor: "#3f3f46",
+      background: "#17171b", color: "#fff", reverseButtons: true,
+    });
+    if (!res.isConfirmed) return;
+    const { error } = await supabase.from(table).delete().in("id", selectedIds);
+    if (error) {
+      Swal.fire({ icon: "error", title: "Gagal Menghapus", text: error.message, confirmButtonColor: "#f97316", background: "#17171b", color: "#fff" });
+      return;
+    }
+    setSelectedIds([]);
+    await load();
+    onChanged?.();
+    Swal.fire({ icon: "success", title: "Berhasil", text: "Data terpilih dihapus.", timer: 1600, showConfirmButton: false, background: "#17171b", color: "#fff" });
+  };
+
+  const toggleRow = (id) =>
+    setSelectedIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  // ===== Import / Export Excel =====
+  const importRef = useRef(null);
+  // Kolom yang diikutkan (lewati kolom gambar).
+  const xlsxCols = fields.filter((f) => f.type !== "image");
+  const contohFor = (f) => {
+    if (f.options) return f.options[0];
+    if (f.type === "number") return f.money ? 100000 : 1;
+    if (f.type === "date") return "2026-08-01";
+    return "Contoh " + (f.label || f.name);
+  };
+
+  const exportExcel = () => {
+    const data = rows.map((r) =>
+      Object.fromEntries(xlsxCols.map((f) => [f.name, r[f.name] ?? ""])),
+    );
+    const ws = XLSX.utils.json_to_sheet(data, {
+      header: xlsxCols.map((f) => f.name),
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, table.slice(0, 28));
+    XLSX.writeFile(wb, `${table}.xlsx`);
+  };
+
+  const downloadTemplate = () => {
+    const contoh = Object.fromEntries(xlsxCols.map((f) => [f.name, contohFor(f)]));
+    const ws = XLSX.utils.json_to_sheet([contoh], {
+      header: xlsxCols.map((f) => f.name),
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "template");
+    XLSX.writeFile(wb, `template-${table}.xlsx`);
+  };
+
+  const importExcel = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // reset agar file sama bisa dipilih ulang
+    if (!file) return;
+    if (preview || !supabase) {
+      Swal.fire({ icon: "info", title: "Mode Preview", text: "Klik Masuk untuk mengimpor data asli.", confirmButtonColor: "#f97316", background: "#17171b", color: "#fff" });
+      return;
+    }
+    try {
+      const wb = XLSX.read(await file.arrayBuffer());
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      const payload = json
+        .map((row) => {
+          const o = {};
+          xlsxCols.forEach((f) => {
+            if (!(f.name in row)) return;
+            let v = row[f.name];
+            if (f.type === "number") v = Number(v) || 0;
+            else v = v === "" ? null : v;
+            o[f.name] = v;
+          });
+          return o;
+        })
+        .filter((o) => Object.values(o).some((v) => v !== null && v !== ""));
+
+      if (payload.length === 0) {
+        Swal.fire({ icon: "warning", title: "Tidak ada data", text: "Pastikan nama kolom di Excel sama dengan template.", confirmButtonColor: "#f97316", background: "#17171b", color: "#fff" });
+        return;
+      }
+      const res = await Swal.fire({
+        title: `Impor ${payload.length} baris?`,
+        text: `Data akan ditambahkan ke tabel "${table}".`,
+        icon: "question", showCancelButton: true, confirmButtonText: "Ya, Impor",
+        cancelButtonText: "Batal", confirmButtonColor: "#f97316", cancelButtonColor: "#3f3f46",
+        background: "#17171b", color: "#fff", reverseButtons: true,
+      });
+      if (!res.isConfirmed) return;
+      const { error } = await supabase.from(table).insert(payload);
+      if (error) throw error;
+      await load();
+      onChanged?.();
+      Swal.fire({ icon: "success", title: "Impor berhasil", text: `${payload.length} baris ditambahkan.`, timer: 2000, showConfirmButton: false, background: "#17171b", color: "#fff" });
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Gagal impor", text: err.message, confirmButtonColor: "#f97316", background: "#17171b", color: "#fff" });
+    }
+  };
+
   const cell = (row, f) => {
     const v = row[f.name];
     if (f.type === "image")
@@ -292,6 +403,14 @@ export default function CrudTable({
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const cur = Math.min(page, pages);
   const slice = filtered.slice((cur - 1) * pageSize, cur * pageSize);
+  const pageIds = slice.map((r) => r.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+  const toggleAllPage = () =>
+    setSelectedIds((prev) =>
+      allPageSelected
+        ? prev.filter((id) => !pageIds.includes(id))
+        : [...new Set([...prev, ...pageIds])],
+    );
   useEffect(() => {
     setPage(1);
   }, [q]);
@@ -336,26 +455,88 @@ export default function CrudTable({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-bold">{title}</h3>
-          {demo && (
-            <p className="text-xs text-amber-500/90">
-              {preview ? (
-                "Menampilkan data contoh (mode preview) — klik Masuk untuk mengelola data asli."
-              ) : (
-                <>
-                  Menampilkan data demo — buat tabel <code>{table}</code> di
-                  Supabase untuk mengelola data asli.
-                </>
-              )}
-            </p>
-          )}
+      <div className="mb-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-bold">{title}</h3>
+            {demo && (
+              <p className="text-xs text-amber-500/90">
+                {preview ? (
+                  "Menampilkan data contoh (mode preview) — klik Masuk untuk mengelola data asli."
+                ) : (
+                  <>
+                    Menampilkan data demo — buat tabel <code>{table}</code> di
+                    Supabase untuk mengelola data asli.
+                  </>
+                )}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={downloadTemplate}
+              title="Unduh contoh format Excel"
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-zinc-300 ring-1 ring-white/15 transition hover:bg-white/5"
+            >
+              <FileSpreadsheet size={15} /> Template
+            </button>
+            <button
+              onClick={() => importRef.current?.click()}
+              title="Impor dari Excel"
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-emerald-300 ring-1 ring-emerald-500/30 transition hover:bg-emerald-500/10"
+            >
+              <Upload size={15} /> Import
+            </button>
+            <input
+              ref={importRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={importExcel}
+            />
+            <button
+              onClick={exportExcel}
+              title="Ekspor ke Excel"
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-sky-300 ring-1 ring-sky-500/30 transition hover:bg-sky-500/10"
+            >
+              <Download size={15} /> Export
+            </button>
+            <button onClick={openNew} className="btn-orange text-sm">
+              + Tambah
+            </button>
+          </div>
         </div>
-        <button onClick={openNew} className="btn-orange text-sm">
-          + Tambah
-        </button>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Cari…"
+          className="field max-w-xs"
+        />
       </div>
+      {selectedIds.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-500/30 bg-orange-500/10 px-4 py-2.5 animate-[fadeIn_.2s_ease]">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-6 min-w-6 place-items-center rounded-full bg-orange-500 px-1.5 text-xs font-bold text-white">
+              {selectedIds.length}
+            </span>
+            <span className="text-sm font-medium text-orange-200">item dipilih</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-300 transition hover:bg-white/5"
+            >
+              Batal
+            </button>
+            <button
+              onClick={removeMany}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500 px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-600 active:scale-[0.98]"
+            >
+              <Trash2 size={15} /> Hapus
+            </button>
+          </div>
+        </div>
+      )}
       <div className="relative card">
         {/* PENTING: overflow-x-auto di wrapper scroll, BUKAN overflow-hidden di card —
             overflow-hidden sebelumnya membuat kolom yang meluber ter-clip, bukan bisa digeser. */}
@@ -366,6 +547,15 @@ export default function CrudTable({
           <table className="w-full min-w-max text-sm">
             <thead className="bg-white/5 text-left muted">
               <tr>
+                <th className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    className="h-[18px] w-[18px] cursor-pointer rounded accent-orange-500 align-middle"
+                    checked={allPageSelected}
+                    onChange={toggleAllPage}
+                    aria-label="Pilih semua"
+                  />
+                </th>
                 {fields.map((f) => (
                   <th
                     key={f.name}
@@ -382,20 +572,32 @@ export default function CrudTable({
             <tbody className="divide-y divide-white/5">
               {loading && (
                 <tr>
-                  <td className="px-4 py-6 muted" colSpan={fields.length + 1}>
+                  <td className="px-4 py-6 muted" colSpan={fields.length + 2}>
                     Memuat…
                   </td>
                 </tr>
               )}
               {!loading && rows.length === 0 && (
                 <tr>
-                  <td className="px-4 py-6 muted" colSpan={fields.length + 1}>
+                  <td className="px-4 py-6 muted" colSpan={fields.length + 2}>
                     Belum ada data.
                   </td>
                 </tr>
               )}
               {slice.map((row, i) => (
-                <tr key={row.id ?? i} className="hover:bg-white/[0.03]">
+                <tr
+                  key={row.id ?? i}
+                  className={`hover:bg-white/[0.03] ${selectedIds.includes(row.id) ? "bg-orange-500/[0.06]" : ""}`}
+                >
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      className="h-[18px] w-[18px] cursor-pointer rounded accent-orange-500 align-middle"
+                      checked={selectedIds.includes(row.id)}
+                      onChange={() => toggleRow(row.id)}
+                      aria-label="Pilih baris"
+                    />
+                  </td>
                   {fields.map((f) => (
                     <td key={f.name} className="whitespace-nowrap px-4 py-3">
                       {cell(row, f)}

@@ -292,8 +292,17 @@ export const statistik = {
   usaha: 6,
 };
 
+// Katalog jenis iuran contoh (untuk mode demo tanpa Supabase).
+export const kasMasterDemo = [
+  { nama: "Iuran Umum", nominal: 25000, aktif: true, wajib: true },
+  { nama: "Iuran Keamanan", nominal: 30000, aktif: true, wajib: true },
+  { nama: "Iuran Kebersihan", nominal: 15000, aktif: true, wajib: true },
+  { nama: "Iuran Air", nominal: 100000, aktif: true, wajib: true },
+];
+
 export const kontak = {
   ketuaRT: "Bpk. Sudirman",
+  narahubung: "Pak Sabar",
   wa: "6281200000000",
   maps: "https://maps.google.com/?q=Sabah+Balau+Jati+Agung",
   alamat:

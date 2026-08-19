@@ -1,13 +1,13 @@
 import { Link, useOutletContext } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase.js";
-import { profil, blok, jadwalSampah, BANJIR_BULAN } from "../data/siteplan.js";
+import { profil, blok, BANJIR_BULAN } from "../data/siteplan.js";
 import { rp } from "../components/ui.jsx";
 import Voting from "../components/Voting.jsx";
 import Donut from "../components/Donut.jsx";
 import MapEmbed from "../components/MapEmbed.jsx";
 import { IconBox } from "../components/icons.jsx";
-import { computeKas } from "../lib/finance.js";
+import { computeKasByJenis } from "../lib/finance.js";
 import {
   Users,
   Wallet,
@@ -59,8 +59,17 @@ function Skeleton({ className = "" }) {
 }
 
 export default function Home() {
-  const { iuran, kas, transaksi, usaha, pengumuman, agenda, lokasi } =
-    useOutletContext();
+  const {
+    iuran,
+    kas,
+    transaksi,
+    usaha,
+    pengumuman,
+    agenda,
+    lokasi,
+    jadwal,
+    kasMaster,
+  } = useOutletContext();
 
   // ✅ State untuk data real-time dari database
   const [dbStats, setDbStats] = useState({
@@ -185,7 +194,7 @@ export default function Home() {
   const kosong = dbStats.kosong;
   const kasBanjir = dbStats.kasBanjir;
 
-  const totalKas = computeKas(kas, transaksi).total;
+  const totalKas = computeKasByJenis(kasMaster, kas, transaksi).total;
   const iuranTotal = iuran.reduce((s, i) => s + Number(i.nominal || 0), 0);
 
   const donutData = [
@@ -436,10 +445,11 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-4 pb-16">
         <h2 className="text-2xl font-bold">Jadwal Kebersihan & Sampah</h2>
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {jadwalSampah.map((j) => (
-            <div key={j.wilayah} className="card p-5">
+          {(jadwal || []).map((j, i) => (
+            <div key={j.id ?? i} className="card p-5">
               <p className="text-sm font-medium text-orange-400">{j.hari}</p>
               <p className="mt-1 text-lg font-bold">{j.wilayah}</p>
+              {j.keterangan && <p className="mt-1 text-xs muted">{j.keterangan}</p>}
             </div>
           ))}
         </div>

@@ -19,7 +19,7 @@ export default function TagihanManager({ onChanged, preview }) {
     try {
       const [{ data: warga }, { data: fees }, { data: existing }] = await Promise.all([
         supabase.from("data_warga").select("*"),
-        supabase.from("kas_master").select("*").eq("aktif", true),
+        supabase.from("kas_master").select("*").eq("aktif", true).eq("wajib", true),
         supabase.from("kas_tagihan").select("blok,jenis").eq("periode", periode.trim()),
       ]);
       const wl = (warga || []).filter((w) => w.ket !== "Kosong");

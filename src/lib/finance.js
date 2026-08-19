@@ -42,6 +42,46 @@ export function computeKas(kasList = [], transaksi = []) {
   };
 }
 
+// "Iuran Keamanan" → "Kas Keamanan"
+export const kasNameFor = (jenis) =>
+  "Kas " + String(jenis).replace(/^iuran\s+/i, "").trim();
+
+// Saldo kas yang MENGIKUTI Jenis Iuran aktif (kas_master). Kalau sebuah jenis
+// dihapus/nonaktif, kasnya otomatis hilang dari ringkasan & landing.
+// Fallback ke computeKas biasa bila katalog jenis belum ada (mis. mode demo).
+export function computeKasByJenis(kasMaster = [], kasList = [], transaksi = []) {
+  const active = (kasMaster || []).filter(
+    (m) => m.aktif !== false && m.aktif !== "false",
+  );
+  // Tidak ada jenis iuran aktif → tidak ada kas sama sekali (bukan fallback lama).
+  if (active.length === 0)
+    return { rows: [], totalAwal: 0, totalMasuk: 0, totalKeluar: 0, total: 0 };
+
+  const awal = Object.fromEntries(
+    (kasList || []).map((k) => [k.nama, n(k.saldo_awal)]),
+  );
+  const names = [...new Set(active.map((m) => kasNameFor(m.nama)))];
+
+  const rows = names.map((nama) => {
+    const t = transaksi.filter((x) => (x.kas || "") === nama);
+    const masuk = sum(t, "masuk");
+    const keluar = sum(t, "keluar");
+    const a = awal[nama] || 0;
+    return { nama, saldo_awal: a, masuk, keluar, saldo: a + masuk - keluar };
+  });
+
+  const totalAwal = rows.reduce((s, r) => s + r.saldo_awal, 0);
+  const totalMasuk = rows.reduce((s, r) => s + r.masuk, 0);
+  const totalKeluar = rows.reduce((s, r) => s + r.keluar, 0);
+  return {
+    rows,
+    totalAwal,
+    totalMasuk,
+    totalKeluar,
+    total: totalAwal + totalMasuk - totalKeluar,
+  };
+}
+
 // Rekap keuangan per periode — dikelompokkan otomatis dari transaksi.
 export function computeKeuangan(transaksi = []) {
   const periodeList = [

@@ -31,7 +31,7 @@ const MENU = [
     items: [
       { to: "/usaha", label: "Usaha Warga" },
       { to: "/hunian", label: "Hunian Tersedia" },
-      { to: "/masukan", label: "Masukan & Saran" },
+      { to: "/masukan", label: "Masukan & Laporan" },
     ],
   },
   {
@@ -253,7 +253,10 @@ export default function Layout() {
                 <span className="text-orange-500">land</span>
               </p>
               <p className="mt-1 text-sm muted">{kontak.alamat}</p>
-              <p className="mt-1 text-sm muted">Ketua RT: {kontak.ketuaRT}</p>
+              {/* <p className="mt-1 text-sm muted">Ketua RT: {kontak.ketuaRT}</p> */}
+              <p className="mt-1 text-sm muted">
+                Narahubung Perumahan Sigerland: {kontak.narahubung}
+              </p>
             </div>
             {/* <div className="flex gap-8">
               {[

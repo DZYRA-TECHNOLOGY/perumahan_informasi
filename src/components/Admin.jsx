@@ -3,8 +3,9 @@ import { supabase, isSupabaseReady } from "../lib/supabase.js";
 import CrudTable from "./CrudTable.jsx";
 import LeafletMap from "./LeafletMap.jsx";
 import TagihanManager from "./TagihanManager.jsx";
+import SaldoKasManager from "./SaldoKasManager.jsx";
 import { Icon } from "./icons.jsx";
-import { computeKas } from "../lib/finance.js";
+import { computeKas, computeKasByJenis, kasNameFor } from "../lib/finance.js";
 import * as local from "../data/siteplan.js";
 import { Printer, Store } from "lucide-react";
 import KasPembayaranForm from "./KasPembayaranForm.jsx";
@@ -98,14 +99,23 @@ function Login() {
 
 // ===== OVERVIEW =====
 function Overview({ preview }) {
+  const demoMaster = [
+    { nama: "Iuran Umum", aktif: true },
+    { nama: "Iuran Keamanan", aktif: true },
+    { nama: "Iuran Kebersihan", aktif: true },
+    { nama: "Iuran Air", aktif: true },
+  ];
   const demo = {
     kas: local.kas,
     transaksi: local.transaksi,
     usaha: local.usahaWarga,
     agenda: local.agenda,
+    kasMaster: demoMaster,
   };
   const [d, setD] = useState(
-    preview ? demo : { kas: [], transaksi: [], usaha: [], agenda: [] },
+    preview
+      ? demo
+      : { kas: [], transaksi: [], usaha: [], agenda: [], kasMaster: [] },
   );
 
   useEffect(() => {
@@ -117,6 +127,7 @@ function Overview({ preview }) {
         transaksi: await t("transaksi"),
         usaha: await t("usaha"),
         agenda: await t("agenda"),
+        kasMaster: await t("kas_master"),
       });
     })();
   }, [preview]);
@@ -126,7 +137,7 @@ function Overview({ preview }) {
     total,
     totalMasuk,
     totalKeluar,
-  } = computeKas(d.kas, d.transaksi);
+  } = computeKasByJenis(d.kasMaster, d.kas, d.transaksi);
   const maxSaldo = Math.max(1, ...kasRows.map((k) => Math.abs(k.saldo)));
 
   const stats = [
@@ -495,6 +506,7 @@ const SECTIONS = [
       { key: "pengumuman", label: "Pengumuman", icon: "Megaphone" },
       { key: "usaha", label: "Usaha Warga", icon: "Store" },
       { key: "struktur", label: "Struktur Organisasi", icon: "Building2" },
+      { key: "jadwal_sampah", label: "Jadwal Sampah", icon: "Trash2" },
       { key: "hunian_listing", label: "Hunian Tersedia", icon: "Home" },
     ],
   },
@@ -713,7 +725,18 @@ const PANELS = {
         type: "number",
         money: true,
       },
+      { name: "wajib", label: "Wajib? (false = sumbangan)", options: ["true", "false"] },
       { name: "aktif", label: "Aktif", options: ["true", "false"] },
+    ],
+  },
+  jadwal_sampah: {
+    title: "Jadwal Kebersihan & Sampah",
+    table: "jadwal_sampah",
+    fallback: [],
+    fields: [
+      { name: "hari", label: "Hari (mis. Senin & Kamis)" },
+      { name: "wilayah", label: "Wilayah (mis. Blok A, B)" },
+      { name: "keterangan", label: "Keterangan", optional: true },
     ],
   },
   kas_tagihan: {
@@ -811,6 +834,30 @@ export default function Admin({ onChanged }) {
   const [tab, setTab] = useState("ringkasan");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  // Opsi kas untuk form Transaksi — DINAMIS mengikuti Jenis Iuran aktif.
+  const [kasOptions, setKasOptions] = useState([
+    "Kas Umum",
+    "Kas Keamanan",
+    "Kas Kebersihan",
+  ]);
+
+  useEffect(() => {
+    if (!supabase || tab !== "transaksi") return;
+    supabase
+      .from("kas_master")
+      .select("nama,aktif")
+      .then(({ data, error }) => {
+        if (error) return; // koneksi/tabel bermasalah → biarkan default
+        const opts = [
+          ...new Set(
+            (data || [])
+              .filter((m) => m.aktif !== false && m.aktif !== "false")
+              .map((m) => kasNameFor(m.nama)),
+          ),
+        ];
+        setKasOptions(opts); // SELALU update, termasuk kosong (semua jenis dihapus)
+      });
+  }, [tab]);
 
   useEffect(() => {
     if (!supabase) {
@@ -1006,6 +1053,20 @@ export default function Admin({ onChanged }) {
               />
             ) : tab === "kas_tagihan" ? (
               <TagihanManager preview={preview} onChanged={onChanged} />
+            ) : tab === "kas" ? (
+              <SaldoKasManager preview={preview} onChanged={onChanged} />
+            ) : tab === "transaksi" ? (
+              <CrudTable
+                key={tab}
+                {...PANELS.transaksi}
+                fields={PANELS.transaksi.fields.map((f) =>
+                  f.name === "kas"
+                    ? { ...f, label: "Kas", options: kasOptions }
+                    : f,
+                )}
+                preview={preview}
+                onChanged={onChanged}
+              />
             ) : (
               <CrudTable
                 key={tab}

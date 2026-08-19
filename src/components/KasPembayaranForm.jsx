@@ -175,6 +175,7 @@ export default function KasPembayaranForm({ onChanged, verifierEmail = "" }) {
         blok: t.blok || "",
         nama: t.nama || "",
         periode: t.periode || "",
+        jenis: t.jenis || "Iuran Umum",
         nominal: Number(t.nominal || 0),
         metode,
         bukti: buktiUrl,
@@ -216,13 +217,16 @@ export default function KasPembayaranForm({ onChanged, verifierEmail = "" }) {
       if (e2) throw e2;
     }
     if (status === "Disetujui") {
+      // Tiap jenis iuran masuk ke KAS-nya sendiri: "Iuran Keamanan" → "Kas Keamanan".
+      const jenis = row.jenis || row.catatan || "Iuran Umum";
+      const kasName = "Kas " + String(jenis).replace(/^iuran\s+/i, "").trim();
       await supabase.from("transaksi").insert({
         tgl: new Date().toISOString().slice(0, 10),
         periode: row.periode || "",
-        kas: "Kas Umum",
+        kas: kasName,
         tipe: "masuk",
         nominal: Number(row.nominal || 0),
-        ket: `${row.catatan || "Iuran"} — ${row.nama || ""} (${row.blok || ""})`,
+        ket: `${jenis} — ${row.nama || ""} (${row.blok || ""})`,
       });
     }
   };

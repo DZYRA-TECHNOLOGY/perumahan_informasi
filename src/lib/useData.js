@@ -31,6 +31,7 @@ const emptyState = {
   kasMaster: [],
   kasTagihan: [],
   kasPembayaran: [],
+  jadwal: local.jadwalSampah,
   source: "supabase",
 };
 
@@ -48,9 +49,10 @@ const localState = {
   banjirPengeluaran: local.banjirPengeluaran,
   struktur: local.struktur,
   lokasi: local.lokasi,
-  kasMaster: [],
+  kasMaster: local.kasMasterDemo,
   kasTagihan: [],
   kasPembayaran: [],
+  jadwal: local.jadwalSampah,
   source: "lokal",
 };
 
@@ -80,6 +82,7 @@ export function useData() {
         kasMaster,
         kasTagihan,
         kasPembayaran,
+        jadwal,
       ] = await Promise.all([
         fetchTable("iuran", local.iuran),
         fetchTable("kas", local.kas),
@@ -97,6 +100,7 @@ export function useData() {
         fetchTable("kas_master", []),
         fetchTable("kas_tagihan", []),
         fetchTable("kas_pembayaran", []),
+        fetchTable("jadwal_sampah", local.jadwalSampah),
       ]);
       if (alive)
         setState({
@@ -116,6 +120,7 @@ export function useData() {
           kasMaster,
           kasTagihan,
           kasPembayaran,
+          jadwal,
           source: "supabase",
         });
     })();

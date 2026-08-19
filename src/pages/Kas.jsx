@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { PageHero, Container, rp, PrintButton, PrintHeader } from "../components/ui.jsx";
-import { computeKas, computeKeuangan } from "../lib/finance.js";
+import { computeKasByJenis, computeKeuangan } from "../lib/finance.js";
 
 // Halaman Kas = BUKU KAS: pemasukan + pengeluaran → saldo (dihitung otomatis
 // dari tabel transaksi). Pembayaran iuran yang sudah diverifikasi otomatis
 // masuk ke sini sebagai transaksi "masuk".
 export default function Kas() {
-  const { kas = [], transaksi = [] } = useOutletContext();
+  const { kas = [], transaksi = [], kasMaster = [] } = useOutletContext();
 
   const { periodeList } = computeKeuangan(transaksi);
   const [periode, setPeriode] = useState("Semua");
@@ -17,7 +17,11 @@ export default function Kas() {
     [transaksi, periode],
   );
 
-  const { rows, total, totalMasuk, totalKeluar, totalAwal } = computeKas(kas, tx);
+  const { rows, total, totalMasuk, totalKeluar, totalAwal } = computeKasByJenis(
+    kasMaster,
+    kas,
+    tx,
+  );
   const maxSaldo = Math.max(1, ...rows.map((k) => Math.abs(k.saldo)));
 
   return (
