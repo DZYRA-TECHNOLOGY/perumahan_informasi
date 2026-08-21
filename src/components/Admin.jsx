@@ -491,12 +491,6 @@ const SECTIONS = [
       { key: "kas_master", label: "Jenis Iuran", icon: "ReceiptText" },
       { key: "kas_tagihan", label: "Tagihan Kas", icon: "ClipboardList" },
       { key: "kas_pembayaran", label: "Pembayaran Masuk", icon: "Wallet" },
-      { key: "banjir_kontribusi", label: "Dana Banjir (Masuk)", icon: "Waves" },
-      {
-        key: "banjir_pengeluaran",
-        label: "Dana Banjir (Keluar)",
-        icon: "HandCoins",
-      },
     ],
   },
   {
@@ -640,32 +634,6 @@ const PANELS = {
       { name: "periode", label: "Periode" },
       { name: "tagihan", label: "Tagihan", type: "number", money: true },
       { name: "status", label: "Status", options: ["Lunas", "Belum Bayar"] },
-    ],
-  },
-  banjir_kontribusi: {
-    title: "Dana Banjir — Kontribusi",
-    table: "banjir_kontribusi",
-    fallback: local.banjirKontribusi,
-    fields: [
-      { name: "blok", label: "Blok" },
-      { name: "nama", label: "Nama" },
-      { name: "jul", label: "Juli", type: "number", optional: true },
-      { name: "ags", label: "Agustus", type: "number", optional: true },
-      { name: "sep", label: "September", type: "number", optional: true },
-      { name: "okt", label: "Oktober", type: "number", optional: true },
-      { name: "nov", label: "November", type: "number", optional: true },
-      { name: "des", label: "Desember", type: "number", optional: true },
-    ],
-  },
-  banjir_pengeluaran: {
-    title: "Dana Banjir — Pengeluaran",
-    table: "banjir_pengeluaran",
-    fallback: local.banjirPengeluaran,
-    fields: [
-      { name: "tgl", label: "Tanggal", type: "date" },
-      { name: "ket", label: "Keterangan / Tahapan" },
-      { name: "persen", label: "Persentase (%)", type: "number" },
-      { name: "nominal", label: "Nominal", type: "number", money: true },
     ],
   },
   struktur: {

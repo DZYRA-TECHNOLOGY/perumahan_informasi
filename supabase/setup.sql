@@ -67,15 +67,6 @@ create table if not exists iuran_air (
   id bigint generated always as identity primary key,
   blok text, penghuni text, periode text, tagihan int default 0, status text
 );
-create table if not exists banjir_kontribusi (
-  id bigint generated always as identity primary key,
-  blok text, nama text, jul int default 0, ags int default 0, sep int default 0,
-  okt int default 0, nov int default 0, des int default 0
-);
-create table if not exists banjir_pengeluaran (
-  id bigint generated always as identity primary key,
-  tgl date, ket text, persen int default 0, nominal int default 0
-);
 create table if not exists struktur (
   id bigint generated always as identity primary key,
   urutan int default 99, jabatan text, nama text, icon text
@@ -175,20 +166,6 @@ select * from (values
 ) v(blok,penghuni,periode,tagihan,status)
 where not exists (select 1 from iuran_air);
 
-insert into banjir_kontribusi (blok, nama, jul, ags, sep, okt, nov, des)
-select * from (values
-  ('B5','Chandra',1000000,0,0,0,0,0),
-  ('A1','Rasyid',500000,500000,0,0,0,0),
-  ('C7','Syaifudin',0,400000,0,0,0,0)
-) v(blok,nama,jul,ags,sep,okt,nov,des)
-where not exists (select 1 from banjir_kontribusi);
-
-insert into banjir_pengeluaran (tgl, ket, persen, nominal)
-select * from (values
-  ('2026-07-15'::date,'Normalisasi selokan tahap 1',15,1860000)
-) v(tgl,ket,persen,nominal)
-where not exists (select 1 from banjir_pengeluaran);
-
 insert into struktur (urutan, jabatan, nama, icon)
 select * from (values
   (1,'Kepala Lingkungan','Bapak Ari','🧑‍💼'),
@@ -210,7 +187,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['iuran','kas','transaksi','agenda','usaha','pengumuman',
-    'data_warga','keuangan','iuran_air','banjir_kontribusi','banjir_pengeluaran','struktur','pengaturan'] loop
+    'data_warga','keuangan','iuran_air','struktur','pengaturan'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "public read" on %I', t);
     execute format('drop policy if exists "auth write" on %I', t);

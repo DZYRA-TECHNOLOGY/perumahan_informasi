@@ -6,7 +6,6 @@ import Iuran from "./pages/Iuran.jsx";
 import Kas from "./pages/Kas.jsx";
 import Keuangan from "./pages/Keuangan.jsx";
 import IuranAir from "./pages/IuranAir.jsx";
-import Banjir from "./pages/Banjir.jsx";
 import DataWarga from "./pages/DataWarga.jsx";
 import Struktur from "./pages/Struktur.jsx";
 import Siteplan from "./pages/Siteplan.jsx";
@@ -38,7 +37,6 @@ export default function App() {
           <Route path="kas" element={<Kas />} />
           <Route path="keuangan" element={<Keuangan />} />
           {/* <Route path="iuran-air" element={<IuranAir />} /> */}
-          <Route path="banjir" element={<Banjir />} />
           <Route path="data-warga" element={<DataWarga />} />
           <Route path="struktur" element={<Struktur />} />
           <Route path="siteplan" element={<Siteplan />} />

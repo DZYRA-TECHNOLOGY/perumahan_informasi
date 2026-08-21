@@ -1,7 +1,7 @@
 import { Link, useOutletContext } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase.js";
-import { profil, blok, BANJIR_BULAN } from "../data/siteplan.js";
+import { profil, blok } from "../data/siteplan.js";
 import { rp } from "../components/ui.jsx";
 import Voting from "../components/Voting.jsx";
 import Donut from "../components/Donut.jsx";
@@ -11,7 +11,6 @@ import { computeKasByJenis } from "../lib/finance.js";
 import {
   Users,
   Wallet,
-  Waves,
   CalendarDays,
   Store,
   ReceiptText,
@@ -77,7 +76,6 @@ export default function Home() {
     dihuni: 0,
     kontrak: 0,
     kosong: 0,
-    kasBanjir: 0,
     totalRumah: 0,
     loading: true,
   });
@@ -90,17 +88,12 @@ export default function Home() {
       const dihuni = dataWarga.filter((w) => w.ket === "Dihuni").length;
       const kontrak = dataWarga.filter((w) => w.ket === "Dikontrakkan").length;
       const kosong = dataWarga.filter((w) => w.ket === "Kosong").length;
-      const kasBanjir = banjirKontribusi.reduce(
-        (s, r) => s + BANJIR_BULAN.reduce((a, b) => a + Number(r[b] || 0), 0),
-        0,
-      );
 
       setDbStats({
         totalWarga: dihuni + kontrak + kosong,
         dihuni,
         kontrak,
         kosong,
-        kasBanjir,
         totalRumah,
         loading: false,
       });
@@ -114,11 +107,6 @@ export default function Home() {
           .from("data_warga")
           .select("ket, blok");
 
-        // Ambil data kontribusi banjir
-        const { data: banjir } = await supabase
-          .from("banjir_kontribusi")
-          .select("*");
-
         const totalRumah =
           warga?.length || blok.reduce((s, b) => s + b.jumlah, 0);
         const dihuni = warga?.filter((w) => w.ket === "Dihuni").length || 0;
@@ -126,23 +114,11 @@ export default function Home() {
           warga?.filter((w) => w.ket === "Dikontrakkan").length || 0;
         const kosong = warga?.filter((w) => w.ket === "Kosong").length || 0;
 
-        // Hitung total kas banjir dari database
-        const kasBanjir =
-          banjir?.reduce((total, row) => {
-            return (
-              total +
-              BANJIR_BULAN.reduce((sum, bulan) => {
-                return sum + Number(row[bulan] || 0);
-              }, 0)
-            );
-          }, 0) || 0;
-
         setDbStats({
           totalWarga: dihuni + kontrak + kosong,
           dihuni,
           kontrak,
           kosong,
-          kasBanjir,
           totalRumah,
           loading: false,
         });
@@ -170,18 +146,8 @@ export default function Home() {
       )
       .subscribe();
 
-    const banjirChannel = supabase
-      .channel("banjir-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "banjir_kontribusi" },
-        () => loadStats(),
-      )
-      .subscribe();
-
     return () => {
       supabase.removeChannel(wargaChannel);
-      supabase.removeChannel(banjirChannel);
     };
   }, []);
 
@@ -192,7 +158,6 @@ export default function Home() {
   const dihuni = dbStats.dihuni;
   const kontrak = dbStats.kontrak;
   const kosong = dbStats.kosong;
-  const kasBanjir = dbStats.kasBanjir;
 
   const totalKas = computeKasByJenis(kasMaster, kas, transaksi).total;
   const iuranTotal = iuran.reduce((s, i) => s + Number(i.nominal || 0), 0);
@@ -268,11 +233,11 @@ export default function Home() {
 
       {/* DASHBOARD RINGKAS */}
       <section className="mx-auto max-w-6xl px-4 py-6">
-        <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {dbStats.loading ? (
             // Loading skeleton
             <>
-              {[...Array(5)].map((_, i) => (
+              {[...Array(4)].map((_, i) => (
                 <div key={i} className="card flex flex-col items-center p-5">
                   <Skeleton className="h-11 w-11 rounded-xl" />
                   <Skeleton className="mt-3 h-3 w-16" />
@@ -296,13 +261,6 @@ export default function Home() {
                 Icon={Wallet}
                 label="Saldo Kas"
                 value={rp(totalKas)}
-              />
-              <DashCard
-                to="/banjir"
-                Icon={Waves}
-                label="Dana Banjir"
-                value={rp(kasBanjir)}
-                unit={`${BANJIR_BULAN.length} bulan`}
               />
               <DashCard
                 to="/warga"
