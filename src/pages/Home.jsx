@@ -21,6 +21,7 @@ import {
   ArrowRight,
   BarChart3,
   Home as HomeIcon,
+  DoorClosed,
 } from "lucide-react";
 
 function DashCard({ to, Icon, label, value, unit, cta }) {
@@ -219,7 +220,7 @@ export default function Home() {
               ["Total Kavling", totalRumah, Landmark],
               ["Ditempati", hunian.ditempati, HomeIcon],
               ["Dikontrakkan", hunian.dikontrakkan, KeyRound],
-              ["Saldo Kas", rp(totalKas), Wallet],
+              ["Kosong", kosong, DoorClosed],
             ].map(([l, v, Ic]) => (
               <div key={l} className="card p-5">
                 <IconBox Comp={Ic} size={20} className="h-10 w-10" />
@@ -250,17 +251,17 @@ export default function Home() {
           ) : (
             <>
               <DashCard
-                to="/data-warga"
-                Icon={Users}
-                label="Rumah dihuni"
-                value={dbStats.dihuni}
-                unit="KK"
-              />
-              <DashCard
                 to="/kas"
                 Icon={Wallet}
                 label="Saldo Kas"
                 value={rp(totalKas)}
+              />
+              <DashCard
+                to="/iuran"
+                Icon={ReceiptText}
+                label="Iuran"
+                value={(kasMaster || []).length}
+                unit="jenis iuran"
               />
               <DashCard
                 to="/warga"
@@ -280,23 +281,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* Info Tambahan Real-time */}
-        {!dbStats.loading && (
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <div className="rounded-xl bg-emerald-500/10 px-4 py-3 text-center">
-              <p className="text-2xl font-bold text-emerald-400">{dihuni}</p>
-              <p className="text-xs text-emerald-300/70">Dihuni</p>
-            </div>
-            <div className="rounded-xl bg-blue-500/10 px-4 py-3 text-center">
-              <p className="text-2xl font-bold text-blue-400">{kontrak}</p>
-              <p className="text-xs text-blue-300/70">Dikontrakkan</p>
-            </div>
-            <div className="rounded-xl bg-zinc-500/10 px-4 py-3 text-center">
-              <p className="text-2xl font-bold text-zinc-400">{kosong}</p>
-              <p className="text-xs text-zinc-300/70">Kosong</p>
-            </div>
-          </div>
-        )}
       </section>
 
       {/* VOTING + STATISTIK */}

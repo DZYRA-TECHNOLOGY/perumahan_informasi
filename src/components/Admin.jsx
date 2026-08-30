@@ -8,6 +8,12 @@ import { Icon } from "./icons.jsx";
 import { computeKas, computeKasByJenis, kasNameFor } from "../lib/finance.js";
 import * as local from "../data/siteplan.js";
 import { Printer, Store } from "lucide-react";
+import Swal from "sweetalert2";
+
+// Auto-logout setelah tidak ada aktivitas (menit). Ubah sesuai kebutuhan.
+const IDLE_MINUTES = 30;
+// Detik peringatan hitung mundur sebelum benar-benar keluar.
+const WARN_SECONDS = 60;
 import KasPembayaranForm from "./KasPembayaranForm.jsx";
 import { Link } from "react-router-dom";
 const rp = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
@@ -848,6 +854,69 @@ export default function Admin({ onChanged }) {
       document.body.style.overflow = "";
     };
   }, [mobileMenuOpen]);
+
+  // Auto-logout saat idle, dengan peringatan hitung mundur dulu.
+  useEffect(() => {
+    if (!session || !supabase) return;
+    let idleTimer;
+    let warningOpen = false;
+
+    const doLogout = async () => {
+      await supabase.auth.signOut();
+      Swal.fire({
+        icon: "info",
+        title: "Sesi berakhir",
+        text: `Anda otomatis keluar setelah ${IDLE_MINUTES} menit tidak aktif.`,
+        confirmButtonColor: "#f97316",
+        background: "#17171b",
+        color: "#fff",
+      });
+    };
+
+    const showWarning = () => {
+      warningOpen = true;
+      let iv;
+      Swal.fire({
+        icon: "warning",
+        title: "Masih di sana?",
+        html: `Sesi akan berakhir dalam <b>${WARN_SECONDS}</b> detik karena tidak ada aktivitas.`,
+        timer: WARN_SECONDS * 1000,
+        timerProgressBar: true,
+        showConfirmButton: true,
+        confirmButtonText: "Tetap Login",
+        confirmButtonColor: "#f97316",
+        allowOutsideClick: false,
+        background: "#17171b",
+        color: "#fff",
+        didOpen: () => {
+          const b = Swal.getHtmlContainer()?.querySelector("b");
+          iv = setInterval(() => {
+            const left = Math.ceil((Swal.getTimerLeft() || 0) / 1000);
+            if (b) b.textContent = left;
+          }, 250);
+        },
+        willClose: () => clearInterval(iv),
+      }).then((res) => {
+        warningOpen = false;
+        if (res.isConfirmed) reset(); // pengurus memilih tetap login
+        else if (res.dismiss === Swal.DismissReason.timer) doLogout();
+      });
+    };
+
+    const reset = () => {
+      if (warningOpen) return; // jangan reset saat dialog peringatan tampil
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(showWarning, (IDLE_MINUTES * 60 - WARN_SECONDS) * 1000);
+    };
+
+    const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => {
+      clearTimeout(idleTimer);
+      events.forEach((e) => window.removeEventListener(e, reset));
+    };
+  }, [session]);
 
   if (!isSupabaseReady) {
     return (
