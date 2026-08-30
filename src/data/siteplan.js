@@ -8,7 +8,7 @@ export const profil = {
   kecamatan: "Kecamatan Jati Agung",
   kabupaten: "Kabupaten Lampung Selatan",
   tagline: "Bersama, Rukun, & Transparan",
-  author: "Powered by DZYRA.CO.ID | All right reserved",
+  author: "Powered by www.dzyra.co.id | All right reserved",
   authorUrl: "https://www.dzyra.co.id", // <- isi dengan URL tujuan
 };
 
