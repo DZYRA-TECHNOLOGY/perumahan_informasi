@@ -4,6 +4,7 @@ import CrudTable from "./CrudTable.jsx";
 import LeafletMap from "./LeafletMap.jsx";
 import TagihanManager from "./TagihanManager.jsx";
 import SaldoKasManager from "./SaldoKasManager.jsx";
+import VotingManager from "./VotingManager.jsx";
 import { Icon } from "./icons.jsx";
 import { computeKas, computeKasByJenis, kasNameFor } from "../lib/finance.js";
 import * as local from "../data/siteplan.js";
@@ -506,6 +507,7 @@ const SECTIONS = [
       { key: "pengumuman", label: "Pengumuman", icon: "Megaphone" },
       { key: "usaha", label: "Usaha Warga", icon: "Store" },
       { key: "struktur", label: "Struktur Organisasi", icon: "Building2" },
+      { key: "voting", label: "Voting Warga", icon: "Vote" },
       { key: "jadwal_sampah", label: "Jadwal Sampah", icon: "Trash2" },
       { key: "hunian_listing", label: "Hunian Tersedia", icon: "Home" },
     ],
@@ -1092,6 +1094,8 @@ export default function Admin({ onChanged }) {
               <TagihanManager preview={preview} onChanged={onChanged} />
             ) : tab === "kas" ? (
               <SaldoKasManager preview={preview} onChanged={onChanged} />
+            ) : tab === "voting" ? (
+              <VotingManager preview={preview} onChanged={onChanged} />
             ) : tab === "transaksi" ? (
               <CrudTable
                 key={tab}

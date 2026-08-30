@@ -77,6 +77,31 @@ create table if not exists pengaturan (
   lat double precision, lng double precision, zoom int default 16,
   label text, alamat text, embed text
 );
+alter table pengaturan add column if not exists voting_pertanyaan text;
+
+-- Voting / polling warga (CRUD dari admin, suara dari warga).
+create table if not exists voting_opsi (
+  id bigint generated always as identity primary key,
+  teks text, suara int not null default 0
+);
+insert into voting_opsi (teks, suara)
+select * from (values
+  ('Tambah lampu penerangan jalan', 0),
+  ('Perbaikan taman & playground', 0),
+  ('Tambah armada angkut sampah', 0),
+  ('Portal/palang otomatis', 0)
+) v(teks,suara)
+where not exists (select 1 from voting_opsi);
+
+alter table voting_opsi enable row level security;
+drop policy if exists "voting read"   on voting_opsi;
+drop policy if exists "voting vote"   on voting_opsi;
+drop policy if exists "voting insert" on voting_opsi;
+drop policy if exists "voting delete" on voting_opsi;
+create policy "voting read"   on voting_opsi for select using (true);
+create policy "voting vote"   on voting_opsi for update using (true) with check (true);
+create policy "voting insert" on voting_opsi for insert to authenticated with check (true);
+create policy "voting delete" on voting_opsi for delete to authenticated using (true);
 
 -- ---------- SEED (hanya jika tabel masih kosong) ----------
 insert into iuran (jenis, nominal, periode)
@@ -180,6 +205,10 @@ insert into pengaturan (id, lat, lng, zoom, label, alamat, embed)
 select 1, -5.3581, 105.3149, 16, 'Cluster Sigerland',
   'Desa Sabah Balau, Kec. Jati Agung, Lampung Selatan', ''
 where not exists (select 1 from pengaturan);
+
+update pengaturan
+  set voting_pertanyaan = coalesce(voting_pertanyaan, 'Prioritas penggunaan kas warga bulan depan?')
+  where id = 1;
 
 -- ---------- KEAMANAN (Row Level Security) ----------
 -- Publik boleh MEMBACA; user login (pengurus) boleh insert/update/delete.

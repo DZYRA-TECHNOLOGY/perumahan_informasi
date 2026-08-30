@@ -30,6 +30,8 @@ const emptyState = {
   kasTagihan: [],
   kasPembayaran: [],
   jadwal: local.jadwalSampah,
+  votingOpsi: local.voting.opsi,
+  votingPertanyaan: local.voting.pertanyaan,
   source: "supabase",
 };
 
@@ -49,6 +51,8 @@ const localState = {
   kasTagihan: [],
   kasPembayaran: [],
   jadwal: local.jadwalSampah,
+  votingOpsi: local.voting.opsi,
+  votingPertanyaan: local.voting.pertanyaan,
   source: "lokal",
 };
 
@@ -77,6 +81,7 @@ export function useData() {
         kasTagihan,
         kasPembayaran,
         jadwal,
+        votingOpsi,
       ] = await Promise.all([
         fetchTable("iuran", local.iuran),
         fetchTable("kas", local.kas),
@@ -93,6 +98,7 @@ export function useData() {
         fetchTable("kas_tagihan", []),
         fetchTable("kas_pembayaran", []),
         fetchTable("jadwal_sampah", local.jadwalSampah),
+        fetchTable("voting_opsi", local.voting.opsi),
       ]);
       if (alive)
         setState({
@@ -111,6 +117,9 @@ export function useData() {
           kasTagihan,
           kasPembayaran,
           jadwal,
+          votingOpsi,
+          votingPertanyaan:
+            pengaturan[0]?.voting_pertanyaan || local.voting.pertanyaan,
           source: "supabase",
         });
     })();
